@@ -3,6 +3,10 @@ uuid = "55eddd50-7f45-4398-96cf-6a37e2b16f80"
 authors = ["LucasMSpereira"]
 version = "0.1.0"
 
+[deps]
+ImplicitDifferentiation = "57b37032-215b-411a-8a7c-41a003a55207"
+TopOpt = "53a1e1a5-51bb-58a9-8a02-02056cc81109"
+
 [compat]
 julia = "1"
 
