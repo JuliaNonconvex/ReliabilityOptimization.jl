@@ -1,5 +1,7 @@
 module Uncertainty
 
-# Write your package code here.
+struct RandomFunction
+  field
+end
 
 end
