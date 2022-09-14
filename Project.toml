@@ -7,6 +7,7 @@ version = "0.1.0"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ImplicitDifferentiation = "57b37032-215b-411a-8a7c-41a003a55207"
 TopOpt = "53a1e1a5-51bb-58a9-8a02-02056cc81109"
+UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
