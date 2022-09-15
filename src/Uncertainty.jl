@@ -8,17 +8,21 @@ function RIA()
 
 end
 
-function getp0(f, x)
-  
-	@unPack forward, params, conds, method = f
-  return ImplicitFunction(forward, (x, p) -> conds, method)(x, params)
-
+function getp0(randFunc::RandomFunction, x)
+  @unpack f, p, conditions, method = randFunc
+	innerOptModel = Nonconvex.Model(f) # Wrap original function f in Nonconvex.jl optimization model
+	KKT = [p_ -> Zygote.gradient(p -> cond(x, p), p_)[1] for cond in conditions] # formulate KKT conditions
+	[add_eq_constraint!(innerOptModel, KKTᵢ) for KKTᵢ in KKT] # add KKTs to optimization model
+	implicit = ImplicitFunction( # implicit wrapper to ensure differentiability
+		optimize(innerOptModel, IpoptAlg(), mean.(p), options = IpoptOptions()),
+		KKT, method)
+	return implicit(x)
 end
 
 struct RandomFunction{F,P}
   f::F
   p::P
-	conditions::F
+	conditions::Array{F}
 	method::F
 end
 

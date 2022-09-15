@@ -1,4 +1,5 @@
-using Uncertainty, Test, ImplicitDifferentiation, Zygote, TopOpt, ChainRulesCore, UnPack
+using Uncertainty, Test, ImplicitDifferentiation, Zygote, TopOpt, ChainRulesCore, UnPack, Nonconvex, Statistics
+Nonconvex.@load Ipopt
 
 @testset "Uncertainty.jl" begin
     ## 1) ImplicitDifferentiation.jl -> ensure differentiability
