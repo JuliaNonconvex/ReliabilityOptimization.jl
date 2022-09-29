@@ -1,19 +1,21 @@
-using Uncertainty, Test, ImplicitDifferentiation, Zygote, TopOpt, ChainRulesCore, UnPack, Nonconvex, Statistics
-Nonconvex.@load Ipopt
+using Uncertainty, Test
 
-@testset "Uncertainty.jl" begin
-    ## 1) ImplicitDifferentiation.jl -> ensure differentiability
-    ## 2) solve optimization -> linear approximation around p0 (MPP)
-    ## 3) linear approximation around p0 and base distribution of parameters -> RandomFunction struct
-    ## 4) RandomFunction struct -> mean and cov functions
-    ## 5) obj(x) to be used in actual application (e.g. TO)
-    function myFunc(x; p)
-    end
-    function g()
-    end
-    rf = RandomFunction(f, MvNormal(zeros(3), I(3)), g, method = FORM(RIA(g)))
+# @testset "Uncertainty.jl" begin
+    # function with at least one random input
+    pol(x, y) = norm(x)^2 + norm(y)^2
+    # define deterministic inputs, in case there are any
+    const y = [4; 5; 8]
+    # input value to be used in example
+    _x = [2; 3; 6]
+    # wrap original function in RandomFunction struct
+    rf = RandomFunction(
+        pol, MvNormal(_x, Diagonal(ones(3))), method = FORM(:RIA)
+    )
+    # call wrapper with example input
+    d = rf(_x)
     function obj(x)
         dist = rf(x)
         mean(dist) + 2 * std(dist)
     end
-end
+    
+# end
