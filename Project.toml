@@ -6,23 +6,30 @@ version = "0.1.0"
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
-GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+DistributionsAD = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 ImplicitDifferentiation = "57b37032-215b-411a-8a7c-41a003a55207"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-Nonconvex = "01bcebdf-4d21-426d-b5c4-6132c1619978"
 NonconvexIpopt = "bf347577-a06d-49ad-a669-8c0e005493b8"
-Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-TopOpt = "53a1e1a5-51bb-58a9-8a02-02056cc81109"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
+ChainRulesCore = "1"
+Distributions = "0.25"
+DistributionsAD = "0.6"
+ImplicitDifferentiation = "0.2"
+NonconvexIpopt = "0.4"
+Reexport = "1"
+UnPack = "1"
+Zygote = "0.6"
 julia = "1"
 
 [extras]
+FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["FiniteDifferences", "Test"]

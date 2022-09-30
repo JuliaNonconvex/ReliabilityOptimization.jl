@@ -1,21 +1,21 @@
-using Uncertainty, Test
+using Uncertainty, Test, FiniteDifferences, Zygote
 
-# @testset "Uncertainty.jl" begin
-    # function with at least one random input
-    pol(x, y) = norm(x)^2 + norm(y)^2
-    # define deterministic inputs, in case there are any
-    const y = [4; 5; 8]
+@testset "Uncertainty.jl" begin
+    # test function - y is random
+    pol(x, y) = [norm(x + y)^2]
     # input value to be used in example
-    _x = [2; 3; 6]
+    x = [2.0, 3.0, 6.0]
     # wrap original function in RandomFunction struct
-    rf = RandomFunction(
-        pol, MvNormal(_x, Diagonal(ones(3))), method = FORM(:RIA)
-    )
+    y = MvNormal(zeros(3), Diagonal(ones(3)))
+    rf = RandomFunction(pol, y, FORM(RIA()))
     # call wrapper with example input
-    d = rf(_x)
+    d = rf(x)
     function obj(x)
         dist = rf(x)
-        mean(dist) + 2 * std(dist)
+        mean(dist)[1] + 2 * sqrt(cov(dist)[1,1])
     end
-    
-# end
+    obj(x)
+    g1 = FiniteDifferences.grad(central_fdm(5, 1), obj, x)[1]
+    g2 = Zygote.gradient(obj, x)[1]
+    @test norm(g1 - g2) < 1e-7
+end
