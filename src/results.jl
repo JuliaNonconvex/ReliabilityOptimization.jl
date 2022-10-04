@@ -2,7 +2,7 @@ using Nonconvex
 Nonconvex.@load Ipopt
 
 f(x) = sqrt(x[2])
-g(x, a, b) = (a*x[1] + b)^3 - x[2]
+g(x, a, b) = (a * x[1] + b)^3 - x[2]
 
 model = Model(f)
 addvar!(model, [0.0, 0.0], [10.0, 10.0])

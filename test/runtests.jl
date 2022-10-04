@@ -12,7 +12,7 @@ using Uncertainty, Test, FiniteDifferences, Zygote
     d = rf(x)
     function obj(x)
         dist = rf(x)
-        mean(dist)[1] + 2 * sqrt(cov(dist)[1,1])
+        mean(dist)[1] + 2 * sqrt(cov(dist)[1, 1])
     end
     obj(x)
     g1 = FiniteDifferences.grad(central_fdm(5, 1), obj, x)[1]
