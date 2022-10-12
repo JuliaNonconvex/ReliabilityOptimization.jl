@@ -1,6 +1,6 @@
-using Uncertainty, Test, FiniteDifferences, Zygote
+using ReliabilityOptimization, Test, FiniteDifferences, Zygote
 
-@testset "Uncertainty.jl" begin
+@testset "ReliabilityOptimization.jl" begin
     # test function - y is random
     pol(x, y) = [norm(x + y)^2]
     # input value to be used in example
