@@ -1,4 +1,4 @@
-module Uncertainty
+module ReliabilityOptimization
 
 using ImplicitDifferentiation, Zygote, LinearAlgebra, ChainRulesCore, SparseArrays
 using UnPack, NonconvexIpopt, Statistics, Distributions, Reexport, DistributionsAD
