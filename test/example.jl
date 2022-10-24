@@ -1,4 +1,4 @@
-using ReliabilityOptimization, Test, TopOpt, NonconvexTOBS
+using ReliabilityOptimization, Test, TopOpt, NonconvexTOBS, ChainRulesCore
 
 const densities = [0.0, 0.5, 1.0] # for mass calculation
 const nmats = 3 # number of materials
@@ -21,10 +21,15 @@ const avgEs = [1e-6, 0.5, 2.0]
 Es = MvNormal(avgEs, Diagonal(0.1 .* avgEs))
 # 'Original' function. At least one input is random.
 # In this example, Es is the random input.
+function multMatVar(x, nmats)
+  out = []
+  @ignore_derivatives out = MultiMaterialVariables(x, nmats)
+  return out
+end
 function uncertainComp(Es, x)
   # interpolation of properties between materials
   interp = MaterialInterpolation(Es, penalty)
-  [comp(filter(interp(MultiMaterialVariables(x, nmats))))]
+  [multMatVar(x, nmats) |> interp |> filter |> comp]
 end
 # wrap original function in RandomFunction struct
 rf = RandomFunction(uncertainComp, Es, FORM(RIA()))
