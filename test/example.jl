@@ -31,4 +31,18 @@ rf = RandomFunction(uncertainComp, Es, FORM(RIA()))
 # initial homogeneous distribution of pseudo-densities
 x0 = fill(M, ncells * (length(Es) - 1))
 # call wrapper with example input
+# (Returns propability distribution of the objective for current point)
 d = rf(x0)
+# mass constraint
+constr = x -> begin
+    ρs = PseudoDensities(MultiMaterialVariables(x, nmats))
+    return sum(element_densities(ρs, densities)) / ncells - 0.3 # unit element volume
+end
+function obj(x) # objective for TO problem
+  dist = rf(x)
+  mean(dist)[1] + 2 * sqrt(cov(dist)[1, 1])
+end
+m = Model(obj) # create optimization model
+addvar!(m, zeros(length(x0)), ones(length(x0))) # setup optimization variables
+Nonconvex.add_ineq_constraint!(m, constr) # setup volume inequality constraint
+@time r = Nonconvex.optimize(m, TOBSAlg(), x0; options = TOBSOptions()) 
