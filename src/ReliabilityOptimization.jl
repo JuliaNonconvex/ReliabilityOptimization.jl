@@ -85,8 +85,6 @@ end
 _vec(x::Real) = [x]
 _vec(x) = x
 
-reduce_hcat(vs) = reduce(hcat, vs)
-
 const fdm = FiniteDifferences.central_fdm(5, 1)
 
 function _jacobian(f, x1, x2)
