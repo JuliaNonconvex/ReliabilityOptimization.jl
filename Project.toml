@@ -1,6 +1,6 @@
 name = "ReliabilityOptimization"
 uuid = "55eddd50-7f45-4398-96cf-6a37e2b16f80"
-authors = ["LucasMSpereira"]
+authors = ["Lucas Pereira and Mohamed Tarek"]
 version = "0.2.0"
 
 [deps]
@@ -34,8 +34,7 @@ Zygote = "0.6"
 julia = "1"
 
 [extras]
-FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["FiniteDifferences", "Test"]
+test = ["Test"]

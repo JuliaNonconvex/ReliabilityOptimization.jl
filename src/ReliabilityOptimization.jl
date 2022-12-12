@@ -85,12 +85,6 @@ end
 _vec(x::Real) = [x]
 _vec(x) = x
 
-function get_identity_vecs(M)
-    return [Vector(sparsevec([i], [1.0], M)) for i in 1:M]
-end
-function ChainRulesCore.rrule(::typeof(get_identity_vecs), M::Int)
-    get_identity_vecs(M), _ -> (NoTangent(), NoTangent())
-end
 reduce_hcat(vs) = reduce(hcat, vs)
 
 const fdm = FiniteDifferences.central_fdm(5, 1)
