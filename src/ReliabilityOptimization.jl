@@ -92,28 +92,10 @@ function ChainRulesCore.rrule(::typeof(get_identity_vecs), M::Int)
     get_identity_vecs(M), _ -> (NoTangent(), NoTangent())
 end
 reduce_hcat(vs) = reduce(hcat, vs)
-# function ChainRulesCore.rrule(::typeof(reduce_hcat), vs::Vector{<:Vector})
-#     return reduce_hcat(vs), Δ -> begin
-#         return NoTangent(), [Δ[:, i] for i in 1:size(Δ, 2)]
-#     end
-# end
 
 const fdm = FiniteDifferences.central_fdm(5, 1)
 
 function _jacobian(f, x1, x2)
-    # val, pb = Zygote.pullback(f, x1, x2)
-    # if val isa Vector
-    #     M = length(val)
-    #     vecs = get_identity_vecs(M)
-    #     cotangents = map(pb, vecs)
-    #     Jt = reduce_hcat(map(last, cotangents))
-    #     return copy(Jt')
-    # elseif val isa Real
-    #     Jt = last(pb(1.0))
-    #     return copy(Jt')
-    # else
-    #     throw(ArgumentError("Output type not supported."))
-    # end
     ẏs = map(eachindex(x2)) do n
         return fdm(zero(eltype(x2))) do ε
             xn = x2[n]
@@ -124,49 +106,6 @@ function _jacobian(f, x1, x2)
     end
     return reduce(hcat, ẏs)
 end
-# function ChainRulesCore.rrule(::typeof(_jacobian), f, x1, x2)
-#     (val, pb), _pb_pb = Zygote.pullback(Zygote.pullback, f, x1, x2)
-#     M = length(val)
-#     if val isa Vector
-#         vecs = get_identity_vecs(M)
-#         _pb = (pb, v) -> last(pb(v))
-#         co1, pb_pb = Zygote.pullback(_pb, pb, first(vecs))
-#         cotangents = vcat([co1], last.(map(pb, @view(vecs[2:end]))))
-#         Jt, hcat_pb = Zygote.pullback(reduce_hcat, cotangents)
-#         return copy(Jt'), Δ -> begin
-#             temp = hcat_pb(Δ')[1]
-#             co_pb = map(temp) do t
-#                 first(pb_pb(t))
-#             end
-#             co_f_x = _pb_pb.(tuple.(Ref(nothing), co_pb))
-#             co_f = sum(getindex.(co_f_x, 1))
-#             co_x1 = sum(getindex.(co_f_x, 2))
-#             co_x2 = sum(getindex.(co_f_x, 3))
-#             return NoTangent(), co_f, co_x1, co_x2
-#         end
-#     elseif val isa Real
-#         println(1)
-#         _pb = (pb, v) -> pb(v)[end]
-#         println(2)
-#         @show _pb(pb, 1.0)
-#         Jt, pb_pb = Zygote.pullback(_pb, pb, 1.0)
-#         println(3)
-#         return copy(Jt'), Δ -> begin
-#             println(4)
-#             @show vec(Δ)
-#             @show Δ
-#             @show pb_pb(Δ')
-#             co_pb = first(pb_pb(vec(Δ)))
-#             co_f_x = _pb_pb((nothing, co_pb))
-#             co_f = co_f_x[1]
-#             co_x1 = co_f_x[2]
-#             co_x2 = co_f_x[3]
-#             return NoTangent(), co_f, co_x1, co_x2
-#         end
-#     else
-#         throw(ArgumentError("Output type not supported."))
-#     end
-# end
 
 function (f::RandomFunction)(x)
     mup = mean(f.p)
