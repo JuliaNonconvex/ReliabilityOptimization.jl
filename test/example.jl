@@ -1,4 +1,5 @@
-using ReliabilityOptimization, Test, NonconvexTOBS, ChainRulesCore, TopOpt, Zygote, FiniteDifferences
+using ReliabilityOptimization,
+    Test, NonconvexTOBS, ChainRulesCore, TopOpt, Zygote, FiniteDifferences
 
 const densities = [0.0, 0.5, 1.0] # for mass calculation
 const nmats = 3 # number of materials
@@ -22,11 +23,11 @@ logEs = MvNormal(log.(avgEs), Matrix(Diagonal(0.1 .* abs.(log.(avgEs)))))
 # 'Original' function. At least one input is random.
 # In this example, Es is the random input.
 function uncertainComp(x, logEs)
-  Es = exp.(logEs)
-  # interpolation of properties between materials
-  interp = MaterialInterpolation(Es, penalty)
-  MultiMaterialVariables(x, nmats) |> interp |> filter |> comp
-  # return sum(x) + sum(Es)
+    Es = exp.(logEs)
+    # interpolation of properties between materials
+    interp = MaterialInterpolation(Es, penalty)
+    MultiMaterialVariables(x, nmats) |> interp |> filter |> comp
+    # return sum(x) + sum(Es)
 end
 # wrap original function in RandomFunction struct
 rf = RandomFunction(uncertainComp, logEs, FORM(RIA()))
@@ -41,8 +42,8 @@ constr = x -> begin
     return sum(element_densities(ρs, densities)) / ncells - 0.3 # unit element volume
 end
 function obj(x) # objective for TO problem
-  dist = rf(x)
-  mean(dist)[1] + 2 * sqrt(cov(dist)[1, 1])
+    dist = rf(x)
+    mean(dist)[1] + 2 * sqrt(cov(dist)[1, 1])
 end
 obj(x0)
 Zygote.gradient(obj, x0)
@@ -51,4 +52,4 @@ FiniteDifferences.grad(central_fdm(5, 1), obj, x0)[1]
 m = Model(obj) # create optimization model
 addvar!(m, zeros(length(x0)), ones(length(x0))) # setup optimization variables
 Nonconvex.add_ineq_constraint!(m, constr) # setup volume inequality constraint
-@time r = Nonconvex.optimize(m, TOBSAlg(), x0; options = TOBSOptions()) 
+@time r = Nonconvex.optimize(m, TOBSAlg(), x0; options = TOBSOptions())

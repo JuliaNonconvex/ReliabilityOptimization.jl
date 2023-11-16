@@ -16,7 +16,7 @@ end
 struct FORM{M}
     method::M
 end
-struct RIA{A, O}
+struct RIA{A,O}
     optim_alg::A
     optim_options::O
 end
@@ -43,12 +43,7 @@ function get_forward(f, p, method::FORM{<:RIA})
         n = size(p)[1]
         addvar!(innerOptModel, fill(-Inf, n + 1), fill(Inf, n + 1))
         add_eq_constraint!(innerOptModel, constr)
-        result = optimize(
-            innerOptModel,
-            alg,
-            [mean(p); 0.0],
-            options = options,
-        )
+        result = optimize(innerOptModel, alg, [mean(p); 0.0], options = options)
         return vcat(result.minimizer, result.problem.mult_g[1])
     end
     return forward
@@ -59,11 +54,7 @@ function get_conditions(f, ::FORM{<:RIA})
         p = pcmult[1:end-2]
         c = pcmult[end-1]
         mult = pcmult[end]
-        return vcat(
-            2 * p + vec(_jacobian(f, x, p)) * mult,
-            2c - mult,
-            f(x, p) .- c,
-        )
+        return vcat(2 * p + vec(_jacobian(f, x, p)) * mult, 2c - mult, f(x, p) .- c)
     end
 end
 
@@ -111,7 +102,12 @@ function (f::RandomFunction)(x)
 end
 
 # necessary type piracy FiniteDifferences._estimate_magnitudes uses this constructor which Zygote struggles to differentiate on its own
-function ChainRulesCore.rrule(::typeof(StaticArraysCore.SVector{3}), x1::T, x2::T, x3::T) where {T}
+function ChainRulesCore.rrule(
+    ::typeof(StaticArraysCore.SVector{3}),
+    x1::T,
+    x2::T,
+    x3::T,
+) where {T}
     StaticArraysCore.SVector{3}(x1, x2, x3), Δ -> (NoTangent(), Δ[1], Δ[2], Δ[3])
 end
 

@@ -2,10 +2,7 @@ using ReliabilityOptimization, Test, FiniteDifferences, Zygote
 
 @testset "ReliabilityOptimization.jl" begin
     # test function - y is random
-    for pol in [
-        (x, y) -> [norm(x + y)^2],
-        (x, y) -> norm(x + y)^2
-    ]
+    for pol in [(x, y) -> [norm(x + y)^2], (x, y) -> norm(x + y)^2]
         # input value to be used in example
         x = [2.0, 3.0, 6.0]
         # wrap original function in RandomFunction struct
