@@ -101,18 +101,4 @@ function (f::RandomFunction)(x)
     return MvNormal(muf, covf)
 end
 
-# necessary type piracy FiniteDifferences._estimate_magnitudes uses this constructor which Zygote struggles to differentiate on its own
-function ChainRulesCore.rrule(
-    ::typeof(StaticArraysCore.SVector{3}),
-    x1::T,
-    x2::T,
-    x3::T,
-) where {T}
-    StaticArraysCore.SVector{3}(x1, x2, x3), Δ -> (NoTangent(), Δ[1], Δ[2], Δ[3])
-end
-
-function ChainRulesCore._eltype_projectto(::Type{T}) where {T<:AbstractVector{<:Number}}
-    return ChainRulesCore.ProjectTo(zero(T))
-end
-
 end
