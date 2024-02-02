@@ -101,4 +101,12 @@ function (f::RandomFunction)(x)
     return MvNormal(muf, covf)
 end
 
+function ChainRulesCore.ProjectTo(x::StaticArraysCore.SVector{N, Vector{Float64}}) where {N}
+    return ChainRulesCore.ProjectTo{SArray}(;
+        element = ChainRulesCore.ProjectTo(zero(first(x))),
+        axes = axes(x),
+        size = Size(x),
+    )
+end
+
 end
