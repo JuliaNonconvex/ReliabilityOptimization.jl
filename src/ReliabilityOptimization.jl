@@ -111,4 +111,8 @@ function ChainRulesCore.rrule(
     StaticArraysCore.SVector{3}(x1, x2, x3), Δ -> (NoTangent(), Δ[1], Δ[2], Δ[3])
 end
 
+function ChainRulesCore._eltype_projectto(::Type{T}) where {T<:AbstractVector{<:Number}}
+    return ChainRulesCore.ProjectTo(zero(T))
+end
+
 end
