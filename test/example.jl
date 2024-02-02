@@ -26,7 +26,7 @@ function uncertainComp(x, logEs)
     Es = exp.(logEs)
     # interpolation of properties between materials
     interp = MaterialInterpolation(Es, penalty)
-    MultiMaterialVariables(x, nmats) |> interp |> filter |> comp
+    MultiMaterialVariables(x, nmats) |> tounit |> filter |> interp |> comp
     # return sum(x) + sum(Es)
 end
 # wrap original function in RandomFunction struct
@@ -37,19 +37,29 @@ x0 = fill(M, ncells * (length(logEs) - 1))
 # (Returns propability distribution of the objective for current point)
 d = rf(x0)
 # mass constraint
+constr_penalty = TopOpt.PowerPenalty(1.0)
+constr_interp = MaterialInterpolation(densities, constr_penalty)
 constr = x -> begin
-    ρs = PseudoDensities(MultiMaterialVariables(x, nmats))
-    return sum(element_densities(ρs, densities)) / ncells - 0.3 # unit element volume
+    ρs = constr_interp(MultiMaterialVariables(x, nmats))
+    return sum(ρs.x) / ncells - 0.3 # elements have unit volumes
 end
 function obj(x) # objective for TO problem
     dist = rf(x)
     mean(dist)[1] + 2 * sqrt(cov(dist)[1, 1])
 end
 obj(x0)
-Zygote.gradient(obj, x0)
-FiniteDifferences.grad(central_fdm(5, 1), obj, x0)[1]
+g1 = Zygote.gradient(obj, x0)[1]
+g2 = FiniteDifferences.grad(central_fdm(5, 1), obj, x0)[1]
+norm(g1 - g2)
+
+cg1 = Zygote.gradient(constr, x0)[1]
+cg2 = FiniteDifferences.grad(central_fdm(5, 1), constr, x0)[1]
+norm(cg1 - cg2)
 
 m = Model(obj) # create optimization model
 addvar!(m, zeros(length(x0)), ones(length(x0))) # setup optimization variables
 Nonconvex.add_ineq_constraint!(m, constr) # setup volume inequality constraint
+
 @time r = Nonconvex.optimize(m, TOBSAlg(), x0; options = TOBSOptions())
+# @time r = Nonconvex.optimize(m, IpoptAlg(), x0; options = IpoptOptions())
+# @time r = Nonconvex.optimize(m, MMA87(), x0; options = MMAOptions())
