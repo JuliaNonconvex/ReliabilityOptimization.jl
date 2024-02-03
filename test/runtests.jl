@@ -21,3 +21,7 @@ using ReliabilityOptimization, Test, FiniteDifferences, Zygote
         @test norm(g1 - g2) < 1e-7
     end
 end
+
+@testset "Multi-material TopOpt example" begin
+    include("example.jl")
+end

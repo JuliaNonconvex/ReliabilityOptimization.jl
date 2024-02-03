@@ -1,7 +1,7 @@
 name = "ReliabilityOptimization"
 uuid = "55eddd50-7f45-4398-96cf-6a37e2b16f80"
 authors = ["Lucas Pereira and Mohamed Tarek"]
-version = "0.2.0"
+version = "0.3.0"
 
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
@@ -27,14 +27,18 @@ FiniteDifferences = "0.12"
 ImplicitDifferentiation = "0.2"
 JuliaFormatter = "1"
 NonconvexIpopt = "0.4"
+NonconvexTOBS = "0.2"
 Reexport = "1"
 StaticArraysCore = "1"
+TopOpt = "0.8"
 UnPack = "1"
 Zygote = "0.6"
 julia = "1"
 
 [extras]
+NonconvexTOBS = "6c0b5230-d4c9-466e-bfd4-b31e6272ab65"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TopOpt = "53a1e1a5-51bb-58a9-8a02-02056cc81109"
 
 [targets]
-test = ["Test"]
+test = ["NonconvexTOBS", "Test", "TopOpt"]
