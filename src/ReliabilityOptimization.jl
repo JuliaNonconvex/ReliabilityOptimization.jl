@@ -1,7 +1,7 @@
 module ReliabilityOptimization
 
 using ImplicitDifferentiation, Zygote, LinearAlgebra, ChainRulesCore, SparseArrays
-using UnPack, NonconvexIpopt, Statistics, Distributions, Reexport, DistributionsAD
+using UnPack, NonconvexIpopt, Statistics, Distributions, Reexport
 using FiniteDifferences, StaticArraysCore
 @reexport using LinearAlgebra
 @reexport using Statistics
@@ -90,7 +90,7 @@ function _jacobian(f, x1, x2)
     return reduce(hcat, ẏs)
 end
 
-function (f::RandomFunction)(x)
+function _mean_cov(f::RandomFunction, x)
     mup = mean(f.p)
     covp = cov(f.p)
     p0 = getp0(f.f, x, f.p, f.method)
@@ -98,7 +98,39 @@ function (f::RandomFunction)(x)
     fp0 = f.f(x, p0)
     muf = _vec(fp0) .+ dfdp0 * (mup - p0)
     covf = dfdp0 * covp * dfdp0'
+    return muf, covf
+end
+
+function (f::RandomFunction)(x)
+    muf, covf = _mean_cov(f, x)
     return MvNormal(muf, covf)
+end
+
+_unthunk(x) = x
+_unthunk(x::ChainRulesCore.AbstractThunk) = ChainRulesCore.unthunk(x)
+_unthunk(x::ChainRulesCore.Tangent) = begin
+    P = typeof(x).parameters[1]
+    return ChainRulesCore.Tangent{P}(; map(_unthunk, ChainRulesCore.backing(x))...)
+end
+_unthunk(x::NamedTuple) = map(_unthunk, x)
+_unthunk(x::Tuple) = map(_unthunk, x)
+
+# Zygote 0.7 cannot differentiate through the `MvNormal`/`PDMat` struct
+# constructors (`Jnew` rejects thunked cotangents), so provide a rrule that
+# only differentiates the mean/covariance computation.
+function ChainRulesCore.rrule(f::RandomFunction, x)
+    muf, covf = _mean_cov(f, x)
+    dist = MvNormal(muf, covf)
+    function pullback(Δ)
+        Δu = _unthunk(Δ)
+        backing = ChainRulesCore.backing(Δu)
+        Δm = get(backing, :μ, ChainRulesCore.ZeroTangent())
+        ΔS = get(backing, :Σ, ChainRulesCore.ZeroTangent())
+        _, back = Zygote.pullback(_mean_cov, f, x)
+        ∂f, ∂x = back((_unthunk(Δm), _unthunk(ΔS)))
+        return NoTangent(), ∂x
+    end
+    return dist, pullback
 end
 
 function ChainRulesCore.ProjectTo(x::StaticArraysCore.SVector{N, Vector{Float64}}) where {N}
