@@ -20,16 +20,18 @@ struct RIA{A,O}
     optim_alg::A
     optim_options::O
 end
-RIA() = RIA(IpoptAlg(), IpoptOptions(print_level = 0, max_wall_time = 1.0))
+RIA() = RIA(IpoptAlg(), IpoptOptions(print_level = 0, max_wall_time = 30.0))
 
 function get_forward(f, p, method::FORM{<:RIA})
     alg, options = method.method.optim_alg, method.method.optim_options
+    prev_minimizer = Ref{Union{Nothing,Vector{Float64}}}(nothing)
     function forward(x)
-        # gets an objective function of p
+        # Reliability index analysis (Hasofer-Lind): minimize ||p|| subject to
+        # the limit state g(x, p) = 0. The auxiliary variable c is fixed at 0
+        # so that the optimum lies on the limit-state surface.
         obj = pc -> begin
             _p = pc[1:end-1]
-            c = pc[end]
-            return _p' * _p + c^2
+            return _p' * _p
         end
         # gets the constraint on p
         constr = pc -> begin
@@ -41,10 +43,13 @@ function get_forward(f, p, method::FORM{<:RIA})
         # should use and reuse the VecModel
         innerOptModel = Model(obj)
         n = size(p)[1]
-        addvar!(innerOptModel, fill(-Inf, n + 1), fill(Inf, n + 1))
+        addvar!(innerOptModel, [fill(-Inf, n); 0.0], [fill(Inf, n); 0.0])
         add_eq_constraint!(innerOptModel, constr)
-        result = optimize(innerOptModel, alg, [mean(p); 0.0], options = options)
-        return vcat(result.minimizer, result.problem.mult_g[1])
+        # Warm-start from the previous MPP when available.
+        x0 = prev_minimizer[] === nothing ? [mean(p); 0.0] : prev_minimizer[]
+        result = optimize(innerOptModel, alg, x0, options = options)
+        prev_minimizer[] = result.minimizer
+        return vcat(result.minimizer, vec(result.problem.mult_g))
     end
     return forward
 end
@@ -54,7 +59,9 @@ function get_conditions(f, ::FORM{<:RIA})
         p = pcmult[1:end-2]
         c = pcmult[end-1]
         mult = pcmult[end]
-        return vcat(2 * p + vec(_jacobian(f, x, p)) * mult, 2c - mult, f(x, p) .- c)
+        # The auxiliary variable c is fixed at 0 in the forward problem, so its
+        # optimality condition is c = 0 rather than 2c - mult = 0.
+        return vcat(2 * p + vec(_jacobian(f, x, p)) * mult, c, f(x, p) .- c)
     end
 end
 
@@ -87,10 +94,14 @@ function _jacobian(f, x1, x2)
             return ret
         end
     end
-    return reduce(hcat, ẏs)
+    J = reduce(hcat, ẏs)
+    # reduce over a single element returns the element itself, so a scalar
+    # output with one random parameter would collapse to a scalar; restore the
+    # 1×1 matrix shape that hcat produces for larger inputs.
+    return J isa Real ? fill(J, 1, 1) : J
 end
 
-function (f::RandomFunction)(x)
+function _mean_cov(f::RandomFunction, x)
     mup = mean(f.p)
     covp = cov(f.p)
     p0 = getp0(f.f, x, f.p, f.method)
@@ -98,7 +109,39 @@ function (f::RandomFunction)(x)
     fp0 = f.f(x, p0)
     muf = _vec(fp0) .+ dfdp0 * (mup - p0)
     covf = dfdp0 * covp * dfdp0'
+    return muf, covf
+end
+
+function (f::RandomFunction)(x)
+    muf, covf = _mean_cov(f, x)
     return MvNormal(muf, covf)
+end
+
+_unthunk(x) = x
+_unthunk(x::ChainRulesCore.AbstractThunk) = ChainRulesCore.unthunk(x)
+_unthunk(x::ChainRulesCore.Tangent) = begin
+    P = typeof(x).parameters[1]
+    return ChainRulesCore.Tangent{P}(; map(_unthunk, ChainRulesCore.backing(x))...)
+end
+_unthunk(x::NamedTuple) = map(_unthunk, x)
+_unthunk(x::Tuple) = map(_unthunk, x)
+
+# Zygote 0.7 cannot differentiate through the `MvNormal`/`PDMat` struct
+# constructors (`Jnew` rejects thunked cotangents), so provide a rrule that
+# only differentiates the mean/covariance computation.
+function ChainRulesCore.rrule(f::RandomFunction, x)
+    muf, covf = _mean_cov(f, x)
+    dist = MvNormal(muf, covf)
+    function pullback(Δ)
+        Δu = _unthunk(Δ)
+        backing = ChainRulesCore.backing(Δu)
+        Δm = get(backing, :μ, ChainRulesCore.ZeroTangent())
+        ΔS = get(backing, :Σ, ChainRulesCore.ZeroTangent())
+        _, back = Zygote.pullback(_mean_cov, f, x)
+        ∂f, ∂x = back((_unthunk(Δm), _unthunk(ΔS)))
+        return NoTangent(), ∂x
+    end
+    return dist, pullback
 end
 
 function ChainRulesCore.ProjectTo(x::StaticArraysCore.SVector{N, Vector{Float64}}) where {N}

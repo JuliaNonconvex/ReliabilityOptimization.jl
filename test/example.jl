@@ -10,7 +10,7 @@ const elSize = (1.0, 1.0) # size of QUAD4 elements
 # Point load cantilever problem to be solved
 problem = PointLoadCantilever(Val{:Linear}, problemSize, elSize, 1.0, v, f)
 ncells = TopOpt.getncells(problem) # Number of elements in mesh
-solver = FEASolver(Direct, problem; xmin = 0.0)
+solver = FEASolver(DirectSolver, problem; xmin = 0.0)
 filter = DensityFilter(solver; rmin = 3.0) # filter to avoid checkerboarding
 M = 1 / nmats / 2 # mass fraction
 comp = Compliance(solver) # function that returns compliance
