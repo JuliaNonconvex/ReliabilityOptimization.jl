@@ -1,4 +1,15 @@
 using ReliabilityOptimization, Test, FiniteDifferences, Zygote
+using Distributions
+
+@testset "RIA on a linear limit state" begin
+    # Regression test: with the limit-state value c a free variable, the MPP
+    # used to land off the limit-state surface (beta = sqrt(2) for g = p - 2
+    # with p ~ N(0, 1)). The Hasofer-Lind solution is p = 2, beta = 2.
+    f = (x, p) -> p[1] - 2.0
+    p = MvNormal(zeros(1), ones(1, 1))
+    p0 = ReliabilityOptimization.getp0(f, [0.0], p, FORM(RIA()))
+    @test p0 ≈ [2.0] atol = 1e-4
+end
 
 @testset "ReliabilityOptimization.jl" begin
     # test function - y is random
