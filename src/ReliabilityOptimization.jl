@@ -94,7 +94,11 @@ function _jacobian(f, x1, x2)
             return ret
         end
     end
-    return reduce(hcat, ẏs)
+    J = reduce(hcat, ẏs)
+    # reduce over a single element returns the element itself, so a scalar
+    # output with one random parameter would collapse to a scalar; restore the
+    # 1×1 matrix shape that hcat produces for larger inputs.
+    return J isa Real ? fill(J, 1, 1) : J
 end
 
 function _mean_cov(f::RandomFunction, x)
