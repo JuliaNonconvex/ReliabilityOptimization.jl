@@ -1,7 +1,7 @@
 module ReliabilityOptimization
 
 using ImplicitDifferentiation, Zygote, LinearAlgebra, ChainRulesCore, SparseArrays
-using UnPack, NonconvexIpopt, Statistics, Distributions, Reexport, DistributionsAD
+using UnPack, NonconvexIpopt, Statistics, Distributions, Reexport
 using FiniteDifferences, StaticArraysCore
 @reexport using LinearAlgebra
 @reexport using Statistics
