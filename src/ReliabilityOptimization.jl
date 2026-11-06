@@ -2,7 +2,7 @@ module ReliabilityOptimization
 
 using ImplicitDifferentiation, Zygote, LinearAlgebra, ChainRulesCore, SparseArrays
 using UnPack, NonconvexIpopt, Statistics, Distributions, Reexport
-using FiniteDifferences, StaticArraysCore
+using FiniteDifferences, StaticArraysCore, ADTypes
 @reexport using LinearAlgebra
 @reexport using Statistics
 export RandomFunction, FORM, RIA, MvNormal
@@ -20,7 +20,7 @@ struct RIA{A,O}
     optim_alg::A
     optim_options::O
 end
-RIA() = RIA(IpoptAlg(), IpoptOptions(print_level = 0, max_wall_time = 30.0))
+RIA() = RIA(IpoptAlg(), IpoptOptions(print_level = 0, max_wall_time = 30.0, tol = 1e-12))
 
 function get_forward(f, p, method::FORM{<:RIA})
     alg, options = method.method.optim_alg, method.method.optim_options
@@ -49,13 +49,17 @@ function get_forward(f, p, method::FORM{<:RIA})
         x0 = prev_minimizer[] === nothing ? [mean(p); 0.0] : prev_minimizer[]
         result = optimize(innerOptModel, alg, x0, options = options)
         prev_minimizer[] = result.minimizer
-        return vcat(result.minimizer, vec(result.problem.mult_g))
+        # ImplicitDifferentiation ≥ 0.9 requires the solver to return
+        # (solution, byproduct); there is no meaningful byproduct here.
+        return vcat(result.minimizer, vec(result.problem.mult_g)), nothing
     end
     return forward
 end
 
 function get_conditions(f, ::FORM{<:RIA})
-    function kkt_conditions(x, pcmult)
+    # ImplicitDifferentiation ≥ 0.9 passes the solver byproduct as the third
+    # argument of the conditions function.
+    function kkt_conditions(x, pcmult, z)
         p = pcmult[1:end-2]
         c = pcmult[end-1]
         mult = pcmult[end]
@@ -68,12 +72,20 @@ end
 function get_implicit(f, p, method)
     forward = get_forward(f, p, method)
     kkt_conditions = get_conditions(f, method)
-    return ImplicitFunction(forward, kkt_conditions)
+    # The conditions embed a finite-difference Jacobian (see `_jacobian`),
+    # whose derivative with respect to the parameters cannot be obtained by
+    # reverse-mode AD. Differentiate the conditions with finite differences
+    # as well, so the curvature term mult * d²f/dp² of the KKT Jacobian is
+    # included instead of being silently dropped.
+    backends = (; x=AutoFiniteDifferences(fdm), y=AutoFiniteDifferences(fdm))
+    return ImplicitFunction(forward, kkt_conditions; backends=backends)
 end
 
 function getp0(f, x, p, method::FORM{<:RIA})
     implicit_f = get_implicit(f, p, method)
-    return implicit_f(x)[1:size(p)[1]]
+    # ImplicitDifferentiation ≥ 0.9 returns (solution, byproduct).
+    y, _ = implicit_f(x)
+    return y[1:size(p)[1]]
 end
 
 function RandomFunction(f, p; method = FORM(RIA()))
@@ -99,6 +111,38 @@ function _jacobian(f, x1, x2)
     # output with one random parameter would collapse to a scalar; restore the
     # 1×1 matrix shape that hcat produces for larger inputs.
     return J isa Real ? fill(J, 1, 1) : J
+end
+
+# The finite-difference Jacobian `_jacobian(f, x1, x2)` cannot be
+# differentiated through by reverse-mode AD (the stencil evaluation points
+# depend on `x1` and `x2` in a way Zygote silently drops, which halved the
+# gradient). Provide a rrule that computes the second-order terms
+# (∂²f/∂x₁∂x₂ and ∂²f/∂x₂²) with central finite differences of the
+# Jacobian itself, so the chain remains correct without requiring `f` to
+# be AD-friendly.
+function ChainRulesCore.rrule(::typeof(_jacobian), f, x1, x2)
+    J = _jacobian(f, x1, x2)
+    function _jacobian_pullback(ΔJ)
+        ΔJ = ChainRulesCore.unthunk(ΔJ)
+        Δm = ΔJ isa AbstractMatrix ? Matrix(ΔJ) : fill(ΔJ, size(J))
+        h = cbrt(eps(float(real(eltype(x2)))))
+        x̄1 = zero(x1)
+        x̄2 = zero(x2)
+        e = zero(x1)
+        for i in eachindex(x1)
+            e[i] = one(eltype(x1))
+            x̄1[i] = dot(Δm, (_jacobian(f, x1 + h * e, x2) - _jacobian(f, x1 - h * e, x2)) / (2h))
+            e[i] = zero(eltype(x1))
+        end
+        e = zero(x2)
+        for i in eachindex(x2)
+            e[i] = one(eltype(x2))
+            x̄2[i] = dot(Δm, (_jacobian(f, x1, x2 + h * e) - _jacobian(f, x1, x2 - h * e)) / (2h))
+            e[i] = zero(eltype(x2))
+        end
+        return NoTangent(), NoTangent(), x̄1, x̄2
+    end
+    return J, _jacobian_pullback
 end
 
 function _mean_cov(f::RandomFunction, x)
