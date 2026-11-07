@@ -8,13 +8,13 @@ const f = 1.0 # downward force
 const problemSize = (4, 4) # size of rectangular mesh
 const elSize = (1.0, 1.0) # size of QUAD4 elements
 # Point load cantilever problem to be solved
-problem = PointLoadCantilever(Val{:Linear}, problemSize, elSize, 1.0, v, f)
+problem = PointLoadCantilever(problemSize, elSize, 1.0, v, f)
 ncells = TopOpt.getncells(problem) # Number of elements in mesh
 solver = FEASolver(DirectSolver, problem; xmin = 0.0)
-filter = DensityFilter(solver; rmin = 3.0) # filter to avoid checkerboarding
+filter = DensityFilterFun(solver; rmin = 3.0) # filter to avoid checkerboarding
 M = 1 / nmats / 2 # mass fraction
-comp = Compliance(solver) # function that returns compliance
-penalty = TopOpt.PowerPenalty(3.0) # SIMP penalty
+comp = ComplianceFun(solver) # function that returns compliance
+penalty = PowerPenaltyFun(3.0) # SIMP penalty
 # Young’s modulii of air (void) + 2 materials
 const avgEs = [1e-6, 0.5, 2.0]
 # since first E is close to zero,
@@ -25,8 +25,8 @@ logEs = MvNormal(log.(avgEs), Matrix(Diagonal(0.1 .* abs.(log.(avgEs)))))
 function uncertainComp(x, logEs)
     Es = exp.(logEs)
     # interpolation of properties between materials
-    interp = MaterialInterpolation(Es, penalty)
-    MultiMaterialVariables(x, nmats) |> tounit |> filter |> interp |> comp
+    interp = MaterialInterpolationFun(Es, penalty)
+    MultiMaterialVariablesFun(x, nmats) |> tounit |> filter |> interp |> comp
     # return sum(x) + sum(Es)
 end
 # wrap original function in RandomFunction struct
@@ -37,10 +37,10 @@ x0 = fill(M, ncells * (length(logEs) - 1))
 # (Returns propability distribution of the objective for current point)
 d = rf(x0)
 # mass constraint
-constr_penalty = TopOpt.PowerPenalty(1.0)
-constr_interp = MaterialInterpolation(densities, constr_penalty)
+constr_penalty = PowerPenaltyFun(1.0)
+constr_interp = MaterialInterpolationFun(densities, constr_penalty)
 constr = x -> begin
-    ρs = constr_interp(MultiMaterialVariables(x, nmats))
+    ρs = constr_interp(MultiMaterialVariablesFun(x, nmats))
     return sum(ρs.x) / ncells - 0.3 # elements have unit volumes
 end
 function obj(x) # objective for TO problem
