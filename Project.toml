@@ -41,8 +41,9 @@ julia = "1.10"
 [extras]
 JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
 NonconvexTOBS = "6c0b5230-d4c9-466e-bfd4-b31e6272ab65"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TopOpt = "53a1e1a5-51bb-58a9-8a02-02056cc81109"
 
 [targets]
-test = ["NonconvexTOBS", "Test", "TopOpt"]
+test = ["NonconvexTOBS", "Random", "Test", "TopOpt"]
