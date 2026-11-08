@@ -297,12 +297,23 @@ end
     @test_throws ArgumentError performance_measure(
         (x, p) -> p[1] - 1.0, [0.0], p; method = FORM(RIA())
     )
+    @test_throws ArgumentError reliability_constraint(
+        (x, p) -> p[1] - 1.0, p, 2.0; method = RIA() # not wrapped in FORM
+    )
     # RandomFunction does not accept SORM methods
     @test_throws ArgumentError RandomFunction((x, p) -> p[1] - 1.0, p, SORM())
     # unsupported multivariate distributions
     @test_throws ArgumentError RandomFunction(
         (x, p) -> p[1] - 1.0, MvLogNormal(zeros(2), Matrix{Float64}(I, 2, 2))
     )
+    # Nataf correlation clamping: mixed marginals cannot reach ρ = 0.95
+    # (max ≈ 0.866), so the equivalent-normal correlation is clamped and the
+    # transform still round-trips
+    ntc = nataf_transform(
+        [Uniform(0.0, 1.0), Exponential(1.0)], [1.0 0.95; 0.95 1.0]
+    )
+    z = [0.3, -0.8]
+    @test ntc.to_u(ntc.from_u(z)) ≈ z atol = 1e-6
 end
 
 @testset "ReliabilityOptimization.jl" begin
