@@ -100,6 +100,18 @@ to_u(tr::StandardNormalTransform, p) = tr.to_u(p)
 _normcdf(u) = (1 + erf(u / sqrt(2))) / 2
 _norminvcdf(p) = sqrt(2) * erfinv(2p - 1)
 
+# Quantile functions with closed, Zygote-differentiable forms where available
+# (used by the Rosenblatt and Nataf transformations so that gradients of the
+# linearized output distribution work for the textbook distributions).
+_quantile_ad(d::Normal, p) = mean(d) + std(d) * _norminvcdf(p)
+_quantile_ad(d::LogNormal, p) = exp(d.μ + d.σ * _norminvcdf(p))
+_quantile_ad(d::Uniform, p) = d.a + (d.b - d.a) * p
+_quantile_ad(d::Exponential, p) = -d.θ * log(1 - p)
+_quantile_ad(d::Gumbel, p) = d.μ - d.θ * log(-log(p))
+_quantile_ad(d::Weibull, p) = d.θ * (-log(1 - p))^(1 / d.α)
+_quantile_ad(d::Frechet, p) = d.θ * (-log(p))^(-1 / d.α)
+_quantile_ad(d::UnivariateDistribution, p) = quantile(d, p)
+
 """
     StandardNormalTransform(d::UnivariateDistribution; μ = [mean(d)], Σ = [var(d);;])
 
@@ -131,7 +143,7 @@ differentiable).
 function StandardNormalTransform(d::UnivariateDistribution; μ = nothing, Σ = nothing)
     μv = μ === nothing ? [float(mean(d))] : collect(float.(μ))
     Σm = Σ === nothing ? reshape([float(var(d))], 1, 1) : Matrix(float.(Σ))
-    from_u = u -> quantile(d, _normcdf(u[1]))
+    from_u = u -> _quantile_ad(d, _normcdf(u[1]))
     to_u = p -> [_norminvcdf(cdf(d, p))]
     return StandardNormalTransform(from_u, to_u, 1; μ = μv, Σ = Σm)
 end
@@ -267,7 +279,7 @@ function nataf_transform(
     σs = [float(std(d)) for d in marginals]
     gs = map(1:n) do i
         d = marginals[i]
-        return z -> (quantile(d, _clampcdf(_normcdf(z))) - μs[i]) / σs[i]
+        return z -> (_quantile_ad(d, _clampcdf(_normcdf(z))) - μs[i]) / σs[i]
     end
     nodes, weights = _gauss_hermite(Int(gh_n))
     ρ0 = Matrix{Float64}(I, n, n)
@@ -278,7 +290,7 @@ function nataf_transform(
     L = cholesky(Symmetric(ρ0)).L
     from_u = u -> begin
         v = L * u
-        return [quantile(marginals[i], _clampcdf(_normcdf(v[i]))) for i in 1:n]
+        return [_quantile_ad(marginals[i], _clampcdf(_normcdf(v[i]))) for i in 1:n]
     end
     to_u = p -> begin
         z = [_norminvcdf(cdf(marginals[i], p[i])) for i in 1:n]

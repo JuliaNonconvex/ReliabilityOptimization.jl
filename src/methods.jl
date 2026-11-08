@@ -108,14 +108,17 @@ function _pma_solver(f, tr, alg, options, β_target, x_ref)
 end
 
 # Deterministic multistart points: the warm start followed by axis-aligned
-# points of growing radius (avoids a Random dependency and is reproducible).
+# points of growing radius with alternating signs (avoids a Random
+# dependency and is reproducible).
 function _starts(warm::AbstractVector, nstarts::Integer; radius::Real)
     starts = [copy(warm)]
     n = length(warm)
     for i in 1:(nstarts - 1)
+        k = i - 1
         u = zeros(n)
-        d = (i - 1) % n + 1
-        u[d] = radius * (1 + (i - 1) ÷ n)
+        d = k % n + 1
+        s = iseven(k ÷ n) ? -1.0 : 1.0
+        u[d] = s * radius * (1 + k ÷ (2n))
         push!(starts, u)
     end
     return starts
@@ -128,9 +131,11 @@ end
 function _best_candidate(candidates, key)
     best = first(candidates)
     for c in Iterators.drop(candidates, 1)
-        if (c.viol ≤ 1e-6 && best.viol > 1e-6) ||
-           (c.viol ≤ 1e-6 == best.viol ≤ 1e-6 && key(c) < key(best)) ||
-           (c.viol > 1e-6 && best.viol > 1e-6 && c.viol < best.viol)
+        feas_c = c.viol ≤ 1e-6
+        feas_best = best.viol ≤ 1e-6
+        if (feas_c && !feas_best) ||
+           (feas_c && feas_best && key(c) < key(best)) ||
+           (!feas_c && !feas_best && c.viol < best.viol)
             best = c
         end
     end

@@ -138,6 +138,17 @@ end
     # the surface curves away from the origin, so the failure region is
     # smaller than the linearized half-space
     @test pf_sorm < cdf(Normal(), -βt)
+    # through a univariate transform: exercises the scalar-parameter FD
+    # Hessian and the FD gradient/Hessian branches of the custom-transform
+    # path (n = 1 has no tangent space, so SORM == FORM)
+    pln = LogNormal(0.0, 0.5)
+    gu = (x, p) -> p - 3.0
+    @test reliability_index(gu, [0.0], pln; method = SORM()) ≈ log(3) / 0.5 atol = 1e-4
+    # undefined Breitung correction (1 + βκ ≤ 0): falls back to FORM (a
+    # warning is emitted)
+    gb = (x, p) -> p[2] + 0.5 * p[1]^2 - 2.0
+    pb = MvNormal(zeros(2), Matrix{Float64}(I, 2, 2))
+    @test reliability_index(gb, [0.0], pb; method = SORM()) ≈ 2.0 atol = 1e-4
 end
 
 @testset "Custom standard-normal transform" begin
@@ -148,6 +159,15 @@ end
     f = (x, p) -> p[1] - 3.0
     @test reliability_index(f, [0.0], tr) ≈ log(3) atol = 1e-4
     @test getp0(f, [0.0], tr) ≈ [3.0] atol = 1e-4
+    # PMA through a custom transform (finite-difference-gradient conditions):
+    # min over |u| = 2 of exp(u) − x1 is attained at u = −2. nstarts = 2
+    # because the default start (+β_target) is a KKT point of the sphere
+    # problem but the wrong one (the maximum).
+    g = (x, p) -> p[1] - x[1]
+    method = FORM(PMA(β_target = 2.0, nstarts = 2))
+    @test performance_measure(g, [2.0], tr; method = method) ≈ exp(-2.0) - 2.0 atol = 1e-4
+    g_ad = Zygote.gradient(x -> performance_measure(g, x, tr; method = method), [2.0])[1]
+    @test g_ad ≈ [-1.0] rtol = 1e-4
 end
 
 @testset "Custom jacobian" begin
@@ -251,6 +271,38 @@ end
     g = (x, p) -> p[1] + p[2] - x[1]
     β = reliability_index(g, [3.0], nt)
     @test β ≈ 3.0 / sqrt(2 + 2 * 0.6) atol = 1e-4
+    # the linearized output distribution through the Nataf transform
+    # (closed-form quantiles keep the from_u mapping differentiable)
+    rfn = RandomFunction(g, nt)
+    d = rfn([3.0])
+    @test mean(d)[1] ≈ -3.0 atol = 1e-4
+    @test cov(d)[1, 1] ≈ 3.2 atol = 1e-4
+    g_ad = Zygote.gradient(x -> mean(rfn(x))[1] + 2 * sqrt(cov(rfn(x))[1, 1]), [3.0])[1]
+    g_fd = FiniteDifferences.grad(
+        central_fdm(5, 1), x -> mean(rfn(x))[1] + 2 * sqrt(cov(rfn(x))[1, 1]), [3.0]
+    )[1]
+    @test g_ad ≈ g_fd rtol = 1e-5
+end
+
+@testset "Error paths and edge cases" begin
+    p = MvNormal(zeros(2), Matrix{Float64}(I, 2, 2))
+    # PMA requires a scalar limit state
+    @test_throws ArgumentError performance_measure(
+        (x, p) -> [p[1] - 1.0, p[2] - 1.0], [0.0], p; method = FORM(PMA(β_target = 2.0))
+    )
+    # wrong method combinations
+    @test_throws ArgumentError reliability_index(
+        (x, p) -> p[1] - 1.0, [0.0], p; method = FORM(PMA(β_target = 2.0))
+    )
+    @test_throws ArgumentError performance_measure(
+        (x, p) -> p[1] - 1.0, [0.0], p; method = FORM(RIA())
+    )
+    # RandomFunction does not accept SORM methods
+    @test_throws ArgumentError RandomFunction((x, p) -> p[1] - 1.0, p, SORM())
+    # unsupported multivariate distributions
+    @test_throws ArgumentError RandomFunction(
+        (x, p) -> p[1] - 1.0, MvLogNormal(zeros(2), Matrix{Float64}(I, 2, 2))
+    )
 end
 
 @testset "ReliabilityOptimization.jl" begin
