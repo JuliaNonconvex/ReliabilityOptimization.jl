@@ -17,7 +17,7 @@ function _jacobian(f, x1, x2)
     scalarx2 = x2 isa Real
     ẏs = map(eachindex(x2v)) do n
         return fdm(zero(eltype(x2v))) do ε
-            xcopy = vcat(x2v[1:n-1], x2v[n] + ε, x2v[n+1:end])
+            xcopy = vcat(x2v[1:(n - 1)], x2v[n] + ε, x2v[(n + 1):end])
             # copy required incase `f(x)` returns something that aliases `x`
             return copy(f(x1, scalarx2 ? xcopy[1] : xcopy))
         end
@@ -48,7 +48,9 @@ function ChainRulesCore.rrule(::typeof(_jacobian), f, x1, x2)
         e = zeros(eltype(x1), length(x1))
         for i in eachindex(x1)
             e[i] = one(eltype(x1))
-            x̄1[i] = dot(Δm, (_jacobian(f, x1 + h * e, x2) - _jacobian(f, x1 - h * e, x2)) / (2h))
+            x̄1[i] = dot(
+                Δm, (_jacobian(f, x1 + h * e, x2) - _jacobian(f, x1 - h * e, x2)) / (2h)
+            )
             e[i] = zero(eltype(x1))
         end
         # scalar parameters are perturbed directly; vector parameters per
@@ -62,8 +64,7 @@ function ChainRulesCore.rrule(::typeof(_jacobian), f, x1, x2)
             for i in eachindex(x2v)
                 e[i] = one(eltype(x2))
                 x̄2v[i] = dot(
-                    Δm,
-                    (_jacobian(f, x1, x2 + h * e) - _jacobian(f, x1, x2 - h * e)) / (2h),
+                    Δm, (_jacobian(f, x1, x2 + h * e) - _jacobian(f, x1, x2 - h * e)) / (2h)
                 )
                 e[i] = zero(eltype(x2))
             end
@@ -97,8 +98,7 @@ function _hessian_fd(g, p::AbstractVector)
             ej = zeros(eltype(p), n)
             ej[j] = h
             H[i, j] =
-                (g(p + ei + ej) - g(p + ei - ej) - g(p - ei + ej) + g(p - ei - ej)) /
-                (4h^2)
+                (g(p + ei + ej) - g(p + ei - ej) - g(p - ei + ej) + g(p - ei - ej)) / (4h^2)
             H[j, i] = H[i, j]
         end
     end

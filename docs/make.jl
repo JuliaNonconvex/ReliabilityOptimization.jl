@@ -4,8 +4,8 @@ using DocumenterFragments: build_fragment
 # out of the doctest outputs.
 build_fragment(
     @__DIR__;
-    checkdocs = :public,
-    doctestfilters = [
+    checkdocs=:public,
+    doctestfilters=[
         r"This program contains Ipopt",
         r"Ipopt is released as open source code",
         r"For more information visit",

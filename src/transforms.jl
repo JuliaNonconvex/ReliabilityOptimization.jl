@@ -42,10 +42,12 @@ function AffineTransform(d::Normal)
 end
 
 dim(tr::AffineTransform) = length(tr.μ)
-from_u(tr::AffineTransform, u::AbstractVector) =
-    tr.univariate ? tr.μ[1] + tr.L[1, 1] * u[1] : tr.μ + tr.L * u
-to_u(tr::AffineTransform, p) =
-    tr.univariate ? [(p - tr.μ[1]) / tr.L[1, 1]] : tr.L \ (vec(p) - tr.μ)
+function from_u(tr::AffineTransform, u::AbstractVector)
+    return tr.univariate ? tr.μ[1] + tr.L[1, 1] * u[1] : tr.μ + tr.L * u
+end
+function to_u(tr::AffineTransform, p)
+    return tr.univariate ? [(p - tr.μ[1]) / tr.L[1, 1]] : tr.L \ (vec(p) - tr.μ)
+end
 
 """
     StandardNormalTransform(from_u, to_u, [n]; μ, Σ)
@@ -68,26 +70,14 @@ struct StandardNormalTransform{F,T,M<:AbstractMatrix} <: AbstractTransform
     Σ::M
     n::Int
 end
-function StandardNormalTransform(
-    from_u::F,
-    to_u::T;
-    μ,
-    Σ,
-) where {F,T}
-    return StandardNormalTransform(from_u, to_u, length(μ); μ = μ, Σ = Σ)
+function StandardNormalTransform(from_u::F, to_u::T; μ, Σ) where {F,T}
+    return StandardNormalTransform(from_u, to_u, length(μ); μ=μ, Σ=Σ)
 end
-function StandardNormalTransform(
-    from_u::F,
-    to_u::T,
-    n::Integer;
-    μ,
-    Σ,
-) where {F,T}
+function StandardNormalTransform(from_u::F, to_u::T, n::Integer; μ, Σ) where {F,T}
     μv = collect(float.(μ))
     Σm = Matrix(float.(Σ))
     length(μv) == n || throw(ArgumentError("μ must have length $n"))
-    size(Σm) == (n, n) ||
-        throw(ArgumentError("Σ must be a $n×$n matrix"))
+    size(Σm) == (n, n) || throw(ArgumentError("Σ must be a $n×$n matrix"))
     return StandardNormalTransform(from_u, to_u, μv, Σm, Int(n))
 end
 
@@ -140,68 +130,68 @@ and constraints remain differentiable; only the linearized output
 distribution of `RandomFunction` requires the transformation itself to be
 differentiable).
 """
-function StandardNormalTransform(d::UnivariateDistribution; μ = nothing, Σ = nothing)
+function StandardNormalTransform(d::UnivariateDistribution; μ=nothing, Σ=nothing)
     μv = μ === nothing ? [float(mean(d))] : collect(float.(μ))
     Σm = Σ === nothing ? reshape([float(var(d))], 1, 1) : Matrix(float.(Σ))
     from_u = u -> _quantile_ad(d, _normcdf(u[1]))
     to_u = p -> [_norminvcdf(cdf(d, p))]
-    return StandardNormalTransform(from_u, to_u, 1; μ = μv, Σ = Σm)
+    return StandardNormalTransform(from_u, to_u, 1; μ=μv, Σ=Σm)
 end
 
 # Closed-form differentiable special cases of the textbook table.
 
-function StandardNormalTransform(d::LogNormal; μ = nothing, Σ = nothing)
+function StandardNormalTransform(d::LogNormal; μ=nothing, Σ=nothing)
     μv = μ === nothing ? [float(mean(d))] : collect(float.(μ))
     Σm = Σ === nothing ? reshape([float(var(d))], 1, 1) : Matrix(float.(Σ))
     λ, ζ = d.μ, d.σ
     from_u = u -> exp(λ + ζ * u[1])
     to_u = p -> [(log(p) - λ) / ζ]
-    return StandardNormalTransform(from_u, to_u, 1; μ = μv, Σ = Σm)
+    return StandardNormalTransform(from_u, to_u, 1; μ=μv, Σ=Σm)
 end
 
-function StandardNormalTransform(d::Uniform; μ = nothing, Σ = nothing)
+function StandardNormalTransform(d::Uniform; μ=nothing, Σ=nothing)
     μv = μ === nothing ? [float(mean(d))] : collect(float.(μ))
     Σm = Σ === nothing ? reshape([float(var(d))], 1, 1) : Matrix(float.(Σ))
     a, b = d.a, d.b
     from_u = u -> a + (b - a) * _normcdf(u[1])
     to_u = p -> [_norminvcdf((p - a) / (b - a))]
-    return StandardNormalTransform(from_u, to_u, 1; μ = μv, Σ = Σm)
+    return StandardNormalTransform(from_u, to_u, 1; μ=μv, Σ=Σm)
 end
 
-function StandardNormalTransform(d::Exponential; μ = nothing, Σ = nothing)
+function StandardNormalTransform(d::Exponential; μ=nothing, Σ=nothing)
     μv = μ === nothing ? [float(mean(d))] : collect(float.(μ))
     Σm = Σ === nothing ? reshape([float(var(d))], 1, 1) : Matrix(float.(Σ))
     θ = d.θ
     from_u = u -> -θ * log(1 - _normcdf(u[1]))
     to_u = p -> [_norminvcdf(1 - exp(-p / θ))]
-    return StandardNormalTransform(from_u, to_u, 1; μ = μv, Σ = Σm)
+    return StandardNormalTransform(from_u, to_u, 1; μ=μv, Σ=Σm)
 end
 
-function StandardNormalTransform(d::Gumbel; μ = nothing, Σ = nothing)
+function StandardNormalTransform(d::Gumbel; μ=nothing, Σ=nothing)
     μv = μ === nothing ? [float(mean(d))] : collect(float.(μ))
     Σm = Σ === nothing ? reshape([float(var(d))], 1, 1) : Matrix(float.(Σ))
     gm, θ = d.μ, d.θ
     from_u = u -> gm - θ * log(-log(_normcdf(u[1])))
     to_u = p -> [_norminvcdf(exp(-exp(-(p - gm) / θ)))]
-    return StandardNormalTransform(from_u, to_u, 1; μ = μv, Σ = Σm)
+    return StandardNormalTransform(from_u, to_u, 1; μ=μv, Σ=Σm)
 end
 
-function StandardNormalTransform(d::Weibull; μ = nothing, Σ = nothing)
+function StandardNormalTransform(d::Weibull; μ=nothing, Σ=nothing)
     μv = μ === nothing ? [float(mean(d))] : collect(float.(μ))
     Σm = Σ === nothing ? reshape([float(var(d))], 1, 1) : Matrix(float.(Σ))
     k, λ = d.α, d.θ
     from_u = u -> λ * (-log(1 - _normcdf(u[1])))^(1 / k)
     to_u = p -> [_norminvcdf(1 - exp(-(p / λ)^k))]
-    return StandardNormalTransform(from_u, to_u, 1; μ = μv, Σ = Σm)
+    return StandardNormalTransform(from_u, to_u, 1; μ=μv, Σ=Σm)
 end
 
-function StandardNormalTransform(d::Frechet; μ = nothing, Σ = nothing)
+function StandardNormalTransform(d::Frechet; μ=nothing, Σ=nothing)
     μv = μ === nothing ? [float(mean(d))] : collect(float.(μ))
     Σm = Σ === nothing ? reshape([float(var(d))], 1, 1) : Matrix(float.(Σ))
     α, σ = d.α, d.θ
     from_u = u -> σ * (-log(_normcdf(u[1])))^(-1 / α)
     to_u = p -> [_norminvcdf(exp(-(p / σ)^(-α)))]
-    return StandardNormalTransform(from_u, to_u, 1; μ = μv, Σ = Σm)
+    return StandardNormalTransform(from_u, to_u, 1; μ=μv, Σ=Σm)
 end
 
 # Gauss-Hermite nodes and weights via the Golub-Welsch algorithm
@@ -240,7 +230,7 @@ function _nataf_rho0(gi, gj, rho, nodes, weights)
     flo, fhi = f(lo), f(hi)
     if rho < flo || rho > fhi
         @warn "the target correlation $rho is outside the achievable range " *
-              "[$flo, $fhi] for this pair of marginals; clamping."
+            "[$flo, $fhi] for this pair of marginals; clamping."
         return rho < flo ? lo : hi
     end
     for _ in 1:60
@@ -268,13 +258,10 @@ default). The mean `μ` and covariance `Σ = D ρ D` of the joint parameters
 [`RandomFunction`](@ref).
 """
 function nataf_transform(
-    marginals::AbstractVector{<:UnivariateDistribution},
-    ρ::AbstractMatrix;
-    gh_n::Integer = 20,
+    marginals::AbstractVector{<:UnivariateDistribution}, ρ::AbstractMatrix; gh_n::Integer=20
 )
     n = length(marginals)
-    size(ρ) == (n, n) ||
-        throw(ArgumentError("ρ must be a $n×$n matrix"))
+    size(ρ) == (n, n) || throw(ArgumentError("ρ must be a $n×$n matrix"))
     μs = [float(mean(d)) for d in marginals]
     σs = [float(std(d)) for d in marginals]
     gs = map(1:n) do i
@@ -288,17 +275,18 @@ function nataf_transform(
         ρ0[i, j] = ρ0[j, i] = r0
     end
     L = cholesky(Symmetric(ρ0)).L
-    from_u = u -> begin
-        v = L * u
-        return [_quantile_ad(marginals[i], _clampcdf(_normcdf(v[i]))) for i in 1:n]
-    end
+    from_u =
+        u -> begin
+            v = L * u
+            return [_quantile_ad(marginals[i], _clampcdf(_normcdf(v[i]))) for i in 1:n]
+        end
     to_u = p -> begin
         z = [_norminvcdf(cdf(marginals[i], p[i])) for i in 1:n]
         return L \ z
     end
     μ = μs
     Σ = Diagonal(σs) * Matrix(ρ) * Diagonal(σs)
-    return StandardNormalTransform(from_u, to_u, n; μ = μ, Σ = Σ)
+    return StandardNormalTransform(from_u, to_u, n; μ=μ, Σ=Σ)
 end
 
 _transform(d::MvNormal) = AffineTransform(d)
@@ -306,7 +294,7 @@ _transform(d::Normal) = AffineTransform(d)
 _transform(d::UnivariateDistribution) = StandardNormalTransform(d)
 _transform(t::AbstractTransform) = t
 function _transform(d::Distribution)
-    throw(
+    return throw(
         ArgumentError(
             "unsupported random-parameter distribution $(typeof(d)); use " *
             "MvNormal, Normal, a univariate distribution, or a " *

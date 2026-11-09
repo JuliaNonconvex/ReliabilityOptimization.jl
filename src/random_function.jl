@@ -41,13 +41,14 @@ struct RandomFunction{F,T,M,I,J}
     jac::J
 end
 
-function RandomFunction(f, p; method = FORM(RIA()), jacobian = nothing)
+function RandomFunction(f, p; method=FORM(RIA()), jacobian=nothing)
     tr = _transform(p)
     jac = _resolve_jac(jacobian)
     return RandomFunction(f, tr, method, get_implicit(f, tr, method, jac), jac)
 end
-RandomFunction(f, p, method; jacobian = nothing) =
-    RandomFunction(f, p; method = method, jacobian = jacobian)
+function RandomFunction(f, p, method; jacobian=nothing)
+    return RandomFunction(f, p; method=method, jacobian=jacobian)
+end
 
 # Most probable point in standard normal space.
 function _mpp(rf::RandomFunction, x)
@@ -69,10 +70,10 @@ function getp0(
     f,
     x,
     p::Union{Distribution,AbstractTransform},
-    method::FORM = FORM(RIA());
-    jacobian = nothing,
+    method::FORM=FORM(RIA());
+    jacobian=nothing,
 )
-    return getp0(RandomFunction(f, p, method; jacobian = jacobian), x)
+    return getp0(RandomFunction(f, p, method; jacobian=jacobian), x)
 end
 
 function _mean_cov(f::RandomFunction, x)
@@ -91,7 +92,7 @@ end
 
 _unthunk(x) = x
 _unthunk(x::ChainRulesCore.AbstractThunk) = ChainRulesCore.unthunk(x)
-_unthunk(x::ChainRulesCore.Tangent) = begin
+function _unthunk(x::ChainRulesCore.Tangent)
     P = typeof(x).parameters[1]
     return ChainRulesCore.Tangent{P}(; map(_unthunk, ChainRulesCore.backing(x))...)
 end
@@ -122,12 +123,4 @@ function ChainRulesCore.rrule(f::RandomFunction, x)
         return NoTangent(), ∂x
     end
     return dist, pullback
-end
-
-function ChainRulesCore.ProjectTo(x::StaticArraysCore.SVector{N, Vector{Float64}}) where {N}
-    return ChainRulesCore.ProjectTo{SArray}(;
-        element = ChainRulesCore.ProjectTo(zero(first(x))),
-        axes = axes(x),
-        size = Size(x),
-    )
 end

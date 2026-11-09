@@ -24,13 +24,15 @@ SORM() = SORM(FORM(RIA()), nothing)
 SORM(method::M) where {M} = SORM(method, nothing)
 
 # SORM is a reliability-analysis method, not a RandomFunction method.
-get_forward(f, tr, method::SORM, jac) = throw(
-    ArgumentError(
-        "SORM is a reliability-analysis method and cannot be used as the " *
-        "RandomFunction method; use FORM(RIA()) or FORM(PMA()), or pass " *
-        "SORM to reliability_index/failure_probability.",
-    ),
-)
+function get_forward(f, tr, method::SORM, jac)
+    return throw(
+        ArgumentError(
+            "SORM is a reliability-analysis method and cannot be used as the " *
+            "RandomFunction method; use FORM(RIA()) or FORM(PMA()), or pass " *
+            "SORM to reliability_index/failure_probability.",
+        ),
+    )
+end
 
 # Gradient of the scalar limit state in u-space.
 function _grad_u(f, x, tr::AffineTransform, u, jac)
@@ -39,9 +41,7 @@ function _grad_u(f, x, tr::AffineTransform, u, jac)
     return tr.L' * vec(J)
 end
 function _grad_u(f, x, tr::StandardNormalTransform, u, jac)
-    return FiniteDifferences.grad(
-        fdm, q -> _scalar_limit_state(f(x, tr.from_u(q))), u
-    )[1]
+    return FiniteDifferences.grad(fdm, q -> _scalar_limit_state(f(x, tr.from_u(q))), u)[1]
 end
 
 # Hessian of the scalar limit state in u-space.
@@ -77,7 +77,7 @@ function _sorm(f, x, tr, method::SORM, jac)
     terms = 1 .+ β .* κ
     if any(t -> t ≤ 0, terms)
         @warn "SORM curvature correction is undefined (1 + βκ ≤ 0); " *
-              "returning the FORM reliability index."
+            "returning the FORM reliability index."
         return β, β
     end
     pf = cdf(Normal(), -β) * prod(t -> 1 / sqrt(t), terms)

@@ -29,13 +29,16 @@ struct RIA{A,O}
     optim_options::O
     nstarts::Int
 end
-RIA(optim_alg::A, optim_options::O; nstarts::Integer = 1) where {A,O} =
-    RIA(optim_alg, optim_options, Int(nstarts))
-RIA(;
-    optim_alg = IpoptAlg(),
-    optim_options = IpoptOptions(print_level = 0, max_wall_time = 30.0, tol = 1e-12),
-    nstarts::Integer = 1,
-) = RIA(optim_alg, optim_options, Int(nstarts))
+function RIA(optim_alg::A, optim_options::O; nstarts::Integer=1) where {A,O}
+    return RIA(optim_alg, optim_options, Int(nstarts))
+end
+function RIA(;
+    optim_alg=IpoptAlg(),
+    optim_options=IpoptOptions(; print_level=0, max_wall_time=30.0, tol=1e-12),
+    nstarts::Integer=1,
+)
+    return RIA(optim_alg, optim_options, Int(nstarts))
+end
 
 """
     PMA(; β_target = 3.0, optim_alg = IpoptAlg(), optim_options = ..., nstarts = 1)
@@ -55,10 +58,10 @@ struct PMA{A,O}
     nstarts::Int
 end
 function PMA(;
-    β_target::Real = 3.0,
-    optim_alg = IpoptAlg(),
-    optim_options = IpoptOptions(print_level = 0, max_wall_time = 30.0, tol = 1e-12),
-    nstarts::Integer = 1,
+    β_target::Real=3.0,
+    optim_alg=IpoptAlg(),
+    optim_options=IpoptOptions(; print_level=0, max_wall_time=30.0, tol=1e-12),
+    nstarts::Integer=1,
 )
     return PMA(optim_alg, optim_options, Float64(β_target), Int(nstarts))
 end
@@ -91,7 +94,7 @@ function _ria_solver(f, tr, alg, options, x_ref)
     addvar!(model, fill(-Inf, n), fill(Inf, n))
     add_eq_constraint!(model, constr)
     vmodel, x0, _ = tovecmodel(model, zeros(n))
-    ws = Workspace(vmodel, alg, copy(x0); options = options)
+    ws = Workspace(vmodel, alg, copy(x0); options=options)
     return NestedSolver(ws, vmodel, x_ref, zeros(n))
 end
 
@@ -103,7 +106,7 @@ function _pma_solver(f, tr, alg, options, β_target, x_ref)
     addvar!(model, fill(-Inf, n), fill(Inf, n))
     add_eq_constraint!(model, constr)
     vmodel, x0, _ = tovecmodel(model, zeros(n))
-    ws = Workspace(vmodel, alg, copy(x0); options = options)
+    ws = Workspace(vmodel, alg, copy(x0); options=options)
     return NestedSolver(ws, vmodel, x_ref, fill(β_target / sqrt(n), n))
 end
 
@@ -134,8 +137,8 @@ function _best_candidate(candidates, key)
         feas_c = c.viol ≤ 1e-6
         feas_best = best.viol ≤ 1e-6
         if (feas_c && !feas_best) ||
-           (feas_c && feas_best && key(c) < key(best)) ||
-           (!feas_c && !feas_best && c.viol < best.viol)
+            (feas_c && feas_best && key(c) < key(best)) ||
+            (!feas_c && !feas_best && c.viol < best.viol)
             best = c
         end
     end
@@ -152,15 +155,11 @@ function get_forward(f, tr, method::FORM{<:RIA}, jac)
             solver[] = _ria_solver(f, tr, optim_alg, optim_options, x_ref)
         end
         s = solver[]
-        candidates = map(_starts(s.start, nstarts; radius = 1.0)) do st
+        candidates = map(_starts(s.start, nstarts; radius=1.0)) do st
             result = _solve!(s, st)
             u = vec(result.minimizer)
             gval = _vec(f(x_ref[], from_u(tr, u)))
-            return (
-                viol = maximum(abs, gval),
-                u = u,
-                mult = vec(result.problem.mult_g),
-            )
+            return (viol=maximum(abs, gval), u=u, mult=vec(result.problem.mult_g))
         end
         best = _best_candidate(candidates, c -> dot(c.u, c.u))
         s.start .= best.u
@@ -181,15 +180,15 @@ function get_forward(f, tr, method::FORM{<:PMA}, jac)
             solver[] = _pma_solver(f, tr, optim_alg, optim_options, β_target, x_ref)
         end
         s = solver[]
-        candidates = map(_starts(s.start, nstarts; radius = β_target)) do st
+        candidates = map(_starts(s.start, nstarts; radius=β_target)) do st
             result = _solve!(s, st)
             u = vec(result.minimizer)
             gval = _scalar_limit_state(f(x_ref[], from_u(tr, u)))
             return (
-                viol = abs(dot(u, u) - β_target^2),
-                u = u,
-                mult = vec(result.problem.mult_g),
-                g = gval,
+                viol=abs(dot(u, u) - β_target^2),
+                u=u,
+                mult=vec(result.problem.mult_g),
+                g=gval,
             )
         end
         best = _best_candidate(candidates, c -> c.g)
@@ -206,7 +205,7 @@ function get_conditions(f, tr::AffineTransform, method::FORM{<:RIA}, jac)
     # argument of the conditions function.
     return function kkt_conditions(x, y, z)
         u = y[1:n]
-        λ = y[n+1:end]
+        λ = y[(n + 1):end]
         p = from_u(tr, u)
         J = jac(f, x, p)
         return vcat(2u + L' * (J' * λ), _vec(f(x, p)))
@@ -217,12 +216,10 @@ function get_conditions(f, tr::StandardNormalTransform, method::FORM{<:RIA}, jac
     n = dim(tr)
     return function kkt_conditions(x, y, z)
         u = y[1:n]
-        λ = y[n+1:end]
+        λ = y[(n + 1):end]
         # The chain rule through a general (non-affine) transformation is
         # handled with finite differences on the Lagrangian in u-space.
-        ∇u = FiniteDifferences.grad(
-            fdm, q -> dot(λ, _vec(f(x, tr.from_u(q)))), u
-        )[1]
+        ∇u = FiniteDifferences.grad(fdm, q -> dot(λ, _vec(f(x, tr.from_u(q)))), u)[1]
         return vcat(2u + ∇u, _vec(f(x, tr.from_u(u))))
     end
 end
@@ -233,7 +230,7 @@ function get_conditions(f, tr::AffineTransform, method::FORM{<:PMA}, jac)
     β_target = method.method.β_target
     return function kkt_conditions(x, y, z)
         u = y[1:n]
-        λ = y[n+1]
+        λ = y[n + 1]
         p = from_u(tr, u)
         J = jac(f, x, p)
         ∇u = L' * vec(J)
@@ -246,10 +243,8 @@ function get_conditions(f, tr::StandardNormalTransform, method::FORM{<:PMA}, jac
     β_target = method.method.β_target
     return function kkt_conditions(x, y, z)
         u = y[1:n]
-        λ = y[n+1]
-        ∇u = FiniteDifferences.grad(
-            fdm, q -> _scalar_limit_state(f(x, tr.from_u(q))), u
-        )[1]
+        λ = y[n + 1]
+        ∇u = FiniteDifferences.grad(fdm, q -> _scalar_limit_state(f(x, tr.from_u(q))), u)[1]
         return vcat(∇u + 2λ * u, dot(u, u) - β_target^2)
     end
 end
@@ -262,6 +257,6 @@ function get_implicit(f, tr, method, jac)
     # reverse-mode AD. Differentiate the conditions with finite differences
     # as well, so the curvature term λᵀ d²g/dp² of the KKT Jacobian is
     # included instead of being silently dropped.
-    backends = (; x = AutoFiniteDifferences(fdm), y = AutoFiniteDifferences(fdm))
-    return ImplicitFunction(forward, kkt_conditions; backends = backends)
+    backends = (; x=AutoFiniteDifferences(fdm), y=AutoFiniteDifferences(fdm))
+    return ImplicitFunction(forward, kkt_conditions; backends=backends)
 end

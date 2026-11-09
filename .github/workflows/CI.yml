@@ -7,25 +7,54 @@ on:
     branches:
       - master
     tags: '*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    name: julia ${{ matrix.julia-version }} - ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: "test: ${{ matrix.group }}"
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        julia-version: ['1',]
-        os: ['ubuntu-latest',]
+        version:
+          - '1'
+        arch:
+          - x64
+        group:
+          - Tests
+          - Aqua_Tests
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@v1
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v2
         with:
-          version: ${{ matrix.julia-version }}
-      - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
-      - uses: julia-actions/julia-processcoverage@v1
-        if: ${{ matrix.julia-version == '1' && matrix.os == 'ubuntu-latest' }}
-      - uses: codecov/codecov-action@v1
-        if: ${{ matrix.julia-version == '1' && matrix.os == 'ubuntu-latest' }}
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+      - uses: julia-actions/cache@v2
+        with:
+          cache-name: test-${{ matrix.group }}
+          cache-artifacts: true
+          cache-packages: true
+          cache-compiled: true
+      - name: Use General git registry (avoids CDN lag for new versions)
+        run: |
+          rm -rf ~/.julia/registries/General.toml ~/.julia/registries/General.tar.gz
+          julia -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url="https://github.com/JuliaRegistries/General.git"))'
+      - name: Instantiate test environment
+        run: julia --project=test -e 'using Pkg; Pkg.develop(PackageSpec(path=".")); Pkg.instantiate(); Pkg.precompile()'
+      - name: Run tests
+        env:
+          GROUP: ${{ matrix.group }}
+        run: julia --project=test --color=yes --check-bounds=yes --depwarn=yes -e 'include("test/runtests.jl")'
+      - name: Process coverage
+        if: matrix.group == 'Tests'
+        uses: julia-actions/julia-processcoverage@v1
+        with:
+          directories: src
+      - name: Upload coverage
+        if: matrix.group == 'Tests'
+        uses: codecov/codecov-action@v5
         with:
           file: lcov.info

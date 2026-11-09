@@ -10,9 +10,9 @@ standard normal space. With `method = SORM(...)` the second-order
 (Breitung-corrected) index is returned instead. The index does not depend
 on which side of the limit state is the failure side.
 """
-function reliability_index(f, x, p; method = FORM(RIA()), jacobian = nothing)
+function reliability_index(f, x, p; method=FORM(RIA()), jacobian=nothing)
     method isa SORM && return _sorm(f, x, _transform(p), method, jacobian)[2]
-    rf = RandomFunction(f, p, method; jacobian = jacobian)
+    rf = RandomFunction(f, p, method; jacobian=jacobian)
     return reliability_index(rf, x)
 end
 function reliability_index(rf::RandomFunction, x)
@@ -31,8 +31,8 @@ end
 The first-order approximation `Φ(−β)` of the probability of failure
 (`SORM`-corrected with `method = SORM(...)`).
 """
-function failure_probability(f, x, p; method = FORM(RIA()), jacobian = nothing)
-    return cdf(Normal(), -reliability_index(f, x, p; method = method, jacobian = jacobian))
+function failure_probability(f, x, p; method=FORM(RIA()), jacobian=nothing)
+    return cdf(Normal(), -reliability_index(f, x, p; method=method, jacobian=jacobian))
 end
 
 """
@@ -45,13 +45,11 @@ scalar-valued and expressed with the **margin convention** (positive
 values safe, `g = 0` the failure surface); then `g* ≥ 0` if and only if the
 reliability index is at least `β_target` (for well-behaved limit states).
 """
-function performance_measure(f, x, p; method = FORM(PMA()), jacobian = nothing)
+function performance_measure(f, x, p; method=FORM(PMA()), jacobian=nothing)
     method isa FORM{<:PMA} || throw(
-        ArgumentError(
-            "performance_measure requires a PMA method; got $(typeof(method)).",
-        ),
+        ArgumentError("performance_measure requires a PMA method; got $(typeof(method))."),
     )
-    rf = RandomFunction(f, p, method; jacobian = jacobian)
+    rf = RandomFunction(f, p, method; jacobian=jacobian)
     return performance_measure(rf, x)
 end
 function performance_measure(rf::RandomFunction, x)
@@ -81,16 +79,16 @@ with `c(x) ≤ 0` if and only if the reliability requirement
 The returned closure keeps a single reusable inner-optimization workspace
 and is differentiable w.r.t. `x` (first-order methods).
 """
-function reliability_constraint(f, p, β_target::Real; method = nothing, jacobian = nothing)
-    m = method === nothing ? FORM(PMA(β_target = β_target)) : method
+function reliability_constraint(f, p, β_target::Real; method=nothing, jacobian=nothing)
+    m = method === nothing ? FORM(PMA(; β_target=β_target)) : method
     if m isa FORM{<:PMA}
-        rf = RandomFunction(f, p, m; jacobian = jacobian)
+        rf = RandomFunction(f, p, m; jacobian=jacobian)
         return x -> -performance_measure(rf, x)
     elseif m isa FORM{<:RIA}
-        rf = RandomFunction(f, p, m; jacobian = jacobian)
+        rf = RandomFunction(f, p, m; jacobian=jacobian)
         return x -> β_target - reliability_index(rf, x)
     end
-    throw(
+    return throw(
         ArgumentError(
             "reliability_constraint requires a FORM(RIA(...)) or " *
             "FORM(PMA(...)) method; got $(typeof(m)).",

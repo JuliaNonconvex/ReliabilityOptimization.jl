@@ -48,7 +48,7 @@ using ImplicitDifferentiation, Zygote, LinearAlgebra, ChainRulesCore, SparseArra
 # NonconvexUtils); use ImplicitDifferentiation's explicitly.
 using ImplicitDifferentiation: ImplicitFunction
 using UnPack, NonconvexIpopt, Statistics, Distributions, Reexport
-using FiniteDifferences, StaticArraysCore, ADTypes, SpecialFunctions
+using FiniteDifferences, ADTypes, SpecialFunctions
 using NonconvexCore: Model, addvar!, add_eq_constraint!, Workspace
 import NonconvexCore: tovecmodel, optimize!
 @reexport using LinearAlgebra
