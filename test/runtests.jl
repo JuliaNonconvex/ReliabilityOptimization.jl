@@ -105,6 +105,8 @@ end
     p = MvNormal(zeros(2), Matrix{Float64}(I, 2, 2))
     c_pma = reliability_constraint(g, p, 2.0) # default: PMA
     c_ria = reliability_constraint(g, p, 2.0; method = FORM(RIA()))
+    # the probabilistic_constraint alias
+    @test probabilistic_constraint(g, p, 2.0)([0.0]) ≈ c_pma([0.0])
     @test c_pma([-0.3]) > 0 # unreliable side (β = 2.7/√2 < 2)
     @test c_pma([0.3]) < 0  # reliable side
     # both formulations agree on the boundary x1 = 2√2 - 3

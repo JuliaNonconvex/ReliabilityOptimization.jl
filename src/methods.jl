@@ -19,7 +19,7 @@ is `β = ‖u*‖` and `p* = p(u*)` is the most probable point (MPP). Supports
 scalar- and vector-valued limit states.
 
 - `optim_alg`: any Nonconvex optimizer supporting equality constraints
-  (default: [`IpoptAlg`](@ref)).
+  `IpoptAlg`.
 - `optim_options`: options forwarded to the inner solver.
 - `nstarts`: number of deterministic inner-solve starts (warm start plus
   `nstarts - 1` axis-aligned points); the best feasible MPP is kept.

@@ -38,12 +38,15 @@ must be scalar-valued for PMA and SORM.
 default Jacobians are finite-difference based (supply a `jacobian` function
 for better performance); the inner optimizer must support equality
 constraints and expose constraint multipliers via `result.problem.mult_g`
-(the default [`IpoptAlg`](@ref) does); `SORM` indices are not
+(the default `IpoptAlg` does); `SORM` indices are not
 differentiable; the inner problem workspace is not thread-safe.
 """
 module ReliabilityOptimization
 
 using ImplicitDifferentiation, Zygote, LinearAlgebra, ChainRulesCore, SparseArrays
+# NonconvexCore 2 also exports an `ImplicitFunction` (absorbed from
+# NonconvexUtils); use ImplicitDifferentiation's explicitly.
+using ImplicitDifferentiation: ImplicitFunction
 using UnPack, NonconvexIpopt, Statistics, Distributions, Reexport
 using FiniteDifferences, StaticArraysCore, ADTypes, SpecialFunctions
 using NonconvexCore: Model, addvar!, add_eq_constraint!, Workspace

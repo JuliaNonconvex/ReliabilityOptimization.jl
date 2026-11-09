@@ -103,4 +103,4 @@ end
 
 Alias for [`reliability_constraint`](@ref).
 """
-const probabilistic_constraint = reliability_constraint
+probabilistic_constraint(args...; kwargs...) = reliability_constraint(args...; kwargs...)
