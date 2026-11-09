@@ -42,6 +42,13 @@ julia> using Zygote
 julia> Zygote.gradient(x -> reliability_index(g, x, p), [2.0, 1.0])[1];
 ```
 
+## Theory
+
+The methods are reviewed in [Theory](theory.md): the limit-state
+formulation, standard normal space, the Hasofer-Lind reliability index,
+FORM (RIA and PMA) with its linearization and sensitivity analysis, and
+SORM's curvature correction, with references.
+
 ## Reliability methods
 
 [`FORM`](@ref) wraps a first-order method: [`RIA`](@ref) solves the

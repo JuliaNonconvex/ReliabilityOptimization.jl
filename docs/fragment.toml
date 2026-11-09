@@ -7,6 +7,10 @@ title = "Introduction"
 file = "index.md"
 
 [[pages]]
+title = "Theory"
+file = "theory.md"
+
+[[pages]]
 title = "Reliability methods"
 file = "methods.md"
 
