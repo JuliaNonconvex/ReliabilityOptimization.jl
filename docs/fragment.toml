@@ -1,0 +1,31 @@
+name = "ReliabilityOptimization"
+modules = ["ReliabilityOptimization"]
+doctest_setup = "using ReliabilityOptimization, Distributions"
+
+[[pages]]
+title = "Introduction"
+file = "index.md"
+
+[[pages]]
+title = "Theory"
+file = "theory.md"
+
+[[pages]]
+title = "Reliability methods"
+file = "methods.md"
+
+[[pages]]
+title = "Random functions"
+file = "random_function.md"
+
+[[pages]]
+title = "Distribution transformations"
+file = "transforms.md"
+
+[[pages]]
+title = "Reliability constraints"
+file = "constraints.md"
+
+[[pages]]
+title = "Docstrings"
+file = "docstrings.md"

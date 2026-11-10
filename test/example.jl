@@ -10,8 +10,8 @@ const elSize = (1.0, 1.0) # size of QUAD4 elements
 # Point load cantilever problem to be solved
 problem = PointLoadCantilever(problemSize, elSize, 1.0, v, f)
 ncells = TopOpt.getncells(problem) # Number of elements in mesh
-solver = FEASolver(DirectSolver, problem; xmin = 0.0)
-filter = DensityFilterFun(solver; rmin = 3.0) # filter to avoid checkerboarding
+solver = FEASolver(DirectSolver, problem; xmin=0.0)
+filter = DensityFilterFun(solver; rmin=3.0) # filter to avoid checkerboarding
 M = 1 / nmats / 2 # mass fraction
 comp = ComplianceFun(solver) # function that returns compliance
 penalty = PowerPenaltyFun(3.0) # SIMP penalty
@@ -26,7 +26,7 @@ function uncertainComp(x, logEs)
     Es = exp.(logEs)
     # interpolation of properties between materials
     interp = MaterialInterpolationFun(Es, penalty)
-    MultiMaterialVariablesFun(x, nmats) |> tounit |> filter |> interp |> comp
+    return comp(interp(filter(tounit(MultiMaterialVariablesFun(x, nmats)))))
     # return sum(x) + sum(Es)
 end
 # wrap original function in RandomFunction struct
@@ -45,7 +45,7 @@ constr = x -> begin
 end
 function obj(x) # objective for TO problem
     dist = rf(x)
-    mean(dist)[1] + 2 * sqrt(cov(dist)[1, 1])
+    return mean(dist)[1] + 2 * sqrt(cov(dist)[1, 1])
 end
 obj(x0)
 g1 = Zygote.gradient(obj, x0)[1]
@@ -58,8 +58,8 @@ norm(cg1 - cg2)
 
 m = Model(obj) # create optimization model
 addvar!(m, zeros(length(x0)), ones(length(x0))) # setup optimization variables
-Nonconvex.add_ineq_constraint!(m, constr) # setup volume inequality constraint
+add_ineq_constraint!(m, constr) # setup volume inequality constraint
 
-@time r = Nonconvex.optimize(m, TOBSAlg(), x0; options = TOBSOptions())
+@time r = optimize(m, TOBSAlg(), x0; options=TOBSOptions())
 # @time r = Nonconvex.optimize(m, IpoptAlg(), x0; options = IpoptOptions())
 # @time r = Nonconvex.optimize(m, MMA87(), x0; options = MMAOptions())

@@ -1,0 +1,14 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterFragments = "862d714e-9826-4bb1-afc7-f2d363bba08c"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+NonconvexIpopt = "bf347577-a06d-49ad-a669-8c0e005493b8"
+ReliabilityOptimization = "55eddd50-7f45-4398-96cf-6a37e2b16f80"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+
+[compat]
+Documenter = "1"
+DocumenterFragments = "0.1"
+Distributions = "0.25"
+NonconvexIpopt = "0.8"
+Zygote = "0.6, 0.7"

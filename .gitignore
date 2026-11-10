@@ -1,2 +1,7 @@
 /Manifest.toml
-docs
+*.cov
+
+# Documentation build artifacts
+docs/build/
+docs/Manifest.toml
+test/Manifest.toml
