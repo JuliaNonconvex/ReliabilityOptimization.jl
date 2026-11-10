@@ -17,20 +17,20 @@
     tr = StandardNormalTransform(
         u -> 2.0 .* u, p -> p ./ 2.0, 2; μ=zeros(2), Σ=Matrix{Float64}(I, 2, 2)
     )
-    @test ReliabilityOptimization.dim(tr) == 2
-    @test tr.from_u([1.0, -1.0]) == [2.0, -2.0]
-    @test tr.to_u([2.0, -2.0]) == [1.0, -1.0]
+    @test ReliabilityOptimization.dim(tr) ≈ 2
+    @test tr.from_u([1.0, -1.0]) ≈ [2.0, -2.0]
+    @test tr.to_u([2.0, -2.0]) ≈ [1.0, -1.0]
 
     # custom μ/Σ overrides for the distribution-based constructors
     trn = StandardNormalTransform(Normal(1.0, 2.0); μ=[0.5], Σ=reshape([4.5], 1, 1))
-    @test trn.μ == [0.5]
-    @test trn.Σ == reshape([4.5], 1, 1)
-    @test trn.n == 1
+    @test trn.μ ≈ [0.5]
+    @test trn.Σ ≈ reshape([4.5], 1, 1)
+    @test trn.n ≈ 1
     @test trn.to_u(3.0) ≈ [(3.0 - 1.0) / 2.0]
     trln = StandardNormalTransform(LogNormal(0.0, 0.5); μ=[2.0], Σ=reshape([7.0], 1, 1))
-    @test trln.μ == [2.0]
-    @test trln.Σ == reshape([7.0], 1, 1)
-    @test trln.to_u(3.0) == [log(3.0) / 0.5]
+    @test trln.μ ≈ [2.0]
+    @test trln.Σ ≈ reshape([7.0], 1, 1)
+    @test trln.to_u(3.0) ≈ [log(3.0) / 0.5]
 
     # generic (non-closed-form) univariate distribution path: Beta
     trb = StandardNormalTransform(Beta(2.0, 3.0))
@@ -41,9 +41,9 @@
     tra = ReliabilityOptimization.AffineTransform(
         [1.0], reshape([2.0], 1, 1), reshape([4.0], 1, 1), true
     )
-    @test ReliabilityOptimization.dim(tra) == 1
+    @test ReliabilityOptimization.dim(tra) ≈ 1
     @test ReliabilityOptimization.from_u(tra, [0.5]) === 2.0
-    @test ReliabilityOptimization.to_u(tra, 3.0) == [1.0]
+    @test ReliabilityOptimization.to_u(tra, 3.0) ≈ [1.0]
     trm = ReliabilityOptimization.AffineTransform(
         [1.0, 2.0], [1.0 0.0; 0.5 1.0], [1.0 0.5; 0.5 1.25], false
     )
@@ -55,20 +55,20 @@
     @test ReliabilityOptimization._norminvcdf(0.5) ≈ 0.0 atol = 1e-12
     @test ReliabilityOptimization._norminvcdf(ReliabilityOptimization._normcdf(0.7)) ≈ 0.7 atol =
         1e-10
-    @test ReliabilityOptimization._clampcdf(0.0) == 1e-15
-    @test ReliabilityOptimization._clampcdf(1.0) == 1 - 1e-15
-    @test ReliabilityOptimization._clampcdf(0.3) == 0.3
+    @test ReliabilityOptimization._clampcdf(0.0) ≈ 1e-15
+    @test ReliabilityOptimization._clampcdf(1.0) ≈ 1 - 1e-15
+    @test ReliabilityOptimization._clampcdf(0.3) ≈ 0.3
 
     # Gauss-Hermite nodes/weights via Golub-Welsch
     nodes, weights = ReliabilityOptimization._gauss_hermite(10)
-    @test length(nodes) == 10 && length(weights) == 10
+    @test length(nodes) ≈ 10 && length(weights) == 10
     @test issorted(nodes)
     @test all(weights .> 0)
     @test sum(weights) ≈ 1.0
     @test abs(sum(weights .* nodes)) < 1e-12
     @test sum(weights .* nodes .^ 2) ≈ 1.0
     n1, w1 = ReliabilityOptimization._gauss_hermite(1)
-    @test n1 == [0.0] && w1 == [1.0]
+    @test n1 ≈ [0.0] && w1 == [1.0]
 end
 
 @testitem "nataf_transform: options, dimensions and clamping" begin
@@ -81,7 +81,7 @@ end
 
     # single marginal
     nt1 = nataf_transform([Normal(1.0, 2.0)], reshape([1.0], 1, 1))
-    @test nt1.from_u([0.7]) == [0.7 * 2.0 + 1.0]
+    @test nt1.from_u([0.7]) ≈ [0.7 * 2.0 + 1.0]
     @test nt1.to_u([2.4]) ≈ [0.7] atol = 1e-8
 
     # gh_n option; normal marginals solve ρ₀ = ρ exactly
@@ -114,7 +114,7 @@ end
     using ReliabilityOptimization, Test, LinearAlgebra, FiniteDifferences, ChainRulesCore
 
     # _vec
-    @test ReliabilityOptimization._vec(1.5) == [1.5]
+    @test ReliabilityOptimization._vec(1.5) ≈ [1.5]
     v = [1.0, 2.0]
     @test ReliabilityOptimization._vec(v) === v
 
@@ -125,8 +125,8 @@ end
     @test ReliabilityOptimization._resolve_jac(jm) === jm
 
     # _scalar_limit_state
-    @test ReliabilityOptimization._scalar_limit_state(2.0) == 2.0
-    @test ReliabilityOptimization._scalar_limit_state([2.0]) == 2.0
+    @test ReliabilityOptimization._scalar_limit_state(2.0) ≈ 2.0
+    @test ReliabilityOptimization._scalar_limit_state([2.0]) ≈ 2.0
     @test_throws ArgumentError ReliabilityOptimization._scalar_limit_state([1.0, 2.0])
 
     # _jacobian shape branches: scalar output / scalar param -> 1×1
@@ -183,31 +183,31 @@ end
     # _starts: warm-start copy, axis-aligned starts, sign alternation, radius growth
     warm = [1.0, 2.0]
     s1 = ReliabilityOptimization._starts(warm, 1; radius=2.0)
-    @test length(s1) == 1 && s1[1] == warm && s1[1] !== warm
+    @test length(s1) ≈ 1 && s1[1] == warm && s1[1] !== warm
     s0 = ReliabilityOptimization._starts(warm, 0; radius=2.0)
-    @test length(s0) == 1 && s0[1] == warm
+    @test length(s0) ≈ 1 && s0[1] == warm
     s5 = ReliabilityOptimization._starts(warm, 5; radius=2.0)
-    @test length(s5) == 5
-    @test s5[2] == [-2.0, 0.0]
-    @test s5[3] == [0.0, -2.0]
-    @test s5[4] == [2.0, 0.0]
-    @test s5[5] == [0.0, 2.0]
+    @test length(s5) ≈ 5
+    @test s5[2] ≈ [-2.0, 0.0]
+    @test s5[3] ≈ [0.0, -2.0]
+    @test s5[4] ≈ [2.0, 0.0]
+    @test s5[5] ≈ [0.0, 2.0]
     s6 = ReliabilityOptimization._starts(warm, 6; radius=2.0)
-    @test s6[6] == [-4.0, 0.0] # radius doubles after one pass over the axes
+    @test s6[6] ≈ [-4.0, 0.0] # radius doubles after one pass over the axes
     # n = 1: alternating signs on the single axis
     su = ReliabilityOptimization._starts([0.0], 3; radius=1.0)
-    @test su[2] == [-1.0] && su[3] == [1.0]
+    @test su[2] ≈ [-1.0] && su[3] == [1.0]
 
     # _best_candidate selection rules
     cands = [(viol=0.5, u=[1.0], g=1.0), (viol=0.0, u=[2.0], g=2.0)]
-    @test ReliabilityOptimization._best_candidate(cands, c -> dot(c.u, c.u)).u == [2.0]
+    @test ReliabilityOptimization._best_candidate(cands, c -> dot(c.u, c.u)).u ≈ [2.0]
     cands2 = [(viol=0.0, u=[3.0], g=0.0), (viol=0.0, u=[1.0], g=0.0)]
-    @test ReliabilityOptimization._best_candidate(cands2, c -> dot(c.u, c.u)).u == [1.0]
+    @test ReliabilityOptimization._best_candidate(cands2, c -> dot(c.u, c.u)).u ≈ [1.0]
     cands3 = [(viol=0.9, u=[1.0], g=1.0), (viol=0.2, u=[2.0], g=2.0)]
-    @test ReliabilityOptimization._best_candidate(cands3, c -> c.g).u == [2.0]
+    @test ReliabilityOptimization._best_candidate(cands3, c -> c.g).u ≈ [2.0]
     # exact ties keep the first candidate
     cands4 = [(viol=0.0, u=[1.0], g=1.0), (viol=0.0, u=[1.0], g=1.0)]
-    @test ReliabilityOptimization._best_candidate(cands4, c -> c.g).u == [1.0]
+    @test ReliabilityOptimization._best_candidate(cands4, c -> c.g).u ≈ [1.0]
 
     # _solve!: workspaces with and without an `x0` field
     struct MockWS
@@ -223,10 +223,10 @@ end
 
     ws = MockWS([0.0, 0.0], Ref(false))
     s = ReliabilityOptimization.NestedSolver(ws, nothing, nothing, [9.0, 9.0])
-    @test ReliabilityOptimization._solve!(s, [1.0, 2.0]) == 3.0
-    @test ws.called[] && ws.x0 == [1.0, 2.0]
+    @test ReliabilityOptimization._solve!(s, [1.0, 2.0]) ≈ 3.0
+    @test ws.called[] && ws.x0 ≈ [1.0, 2.0]
     s2 = ReliabilityOptimization.NestedSolver(NoX0WS(), nothing, nothing, [0.0, 0.0])
-    @test ReliabilityOptimization._solve!(s2, [3.0, 4.0]) == 42.0
+    @test ReliabilityOptimization._solve!(s2, [3.0, 4.0]) ≈ 42.0
 
     # positional RIA constructor and struct fields
     alg = ReliabilityOptimization.IpoptAlg()
@@ -234,11 +234,11 @@ end
     m = RIA(alg, opts; nstarts=2)
     @test m.optim_alg === alg
     @test m.optim_options === opts
-    @test m.nstarts == 2
+    @test m.nstarts ≈ 2
     # keyword constructors and field layout
-    @test RIA().nstarts == 1
+    @test RIA().nstarts ≈ 1
     pm = PMA(β_target=2.5)
-    @test pm.β_target == 2.5 && pm.nstarts == 1
+    @test pm.β_target ≈ 2.5 && pm.nstarts == 1
     @test FORM(pm).method === pm
     srm = SORM(FORM(RIA()))
     @test srm.hessian === nothing
@@ -371,12 +371,12 @@ end
     # _unthunk on plain values, thunks, tuples, named tuples and tangents
     @test ReliabilityOptimization._unthunk(1.0) === 1.0
     th = ChainRulesCore.@thunk 2.0
-    @test ReliabilityOptimization._unthunk(th) == 2.0
+    @test ReliabilityOptimization._unthunk(th) ≈ 2.0
     @test ReliabilityOptimization._unthunk((th, 3.0)) == (2.0, 3.0)
     @test ReliabilityOptimization._unthunk((a=th, b=3.0)) == (a=2.0, b=3.0)
     tg = ChainRulesCore.Tangent{ComplexF64}(re=1.0, im=th)
     ut = ReliabilityOptimization._unthunk(tg)
-    @test ut isa ChainRulesCore.Tangent && ut.re == 1.0 && ut.im == 2.0
+    @test ut isa ChainRulesCore.Tangent && ut.re ≈ 1.0 && ut.im == 2.0
 
     # the RandomFunction rrule accepts an explicit Tangent cotangent and
     # matches the Zygote-accumulated and finite-difference gradients

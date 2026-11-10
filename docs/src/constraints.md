@@ -19,6 +19,22 @@ returned instead.
 
 ## Performance measure
 
+```jldoctest; output = false, filter = r"[\s\S]*" => ""
+julia> using ReliabilityOptimization, Distributions
+
+julia> g = (x, p) -> 3.0 + x[1] - p[1] - p[2]; # margin convention
+
+julia> p = MvNormal(zeros(2), Matrix{Float64}(I, 2, 2));
+
+julia> performance_measure(g, [0.0], p); # PMA by default: g* = 3 − 2√2
+```
+
+The performance measure is the minimum of the limit state over the
+`β_target` sphere in standard normal space; `g* ≥ 0` exactly when the
+reliability index is at least `β_target`. The default method is
+`FORM(PMA())` with `β_target = 3.0`; pass `method = FORM(PMA(β_target = ...))`
+for a custom target.
+
 ## Probabilistic constraints
 
 ```jldoctest; output = false, filter = r"[\s\S]*" => ""
@@ -39,6 +55,12 @@ julia> c([0.3]); # < 0: reliable
 julia> # RIA formulation: c(x) = β_target − β(x)
 
 julia> c_ria = reliability_constraint(g, p, 2.0; method = FORM(RIA()));
+
+julia> # probabilistic_constraint is an alias of reliability_constraint
+
+julia> c_alias = probabilistic_constraint(g, p, 2.0);
+
+julia> c_alias([0.0]) ≈ c([0.0]);
 ```
 
 The returned closure keeps a single reusable inner-optimization workspace
