@@ -58,8 +58,8 @@ norm(cg1 - cg2)
 
 m = Model(obj) # create optimization model
 addvar!(m, zeros(length(x0)), ones(length(x0))) # setup optimization variables
-Nonconvex.add_ineq_constraint!(m, constr) # setup volume inequality constraint
+add_ineq_constraint!(m, constr) # setup volume inequality constraint
 
-@time r = Nonconvex.optimize(m, TOBSAlg(), x0; options=TOBSOptions())
+@time r = optimize(m, TOBSAlg(), x0; options=TOBSOptions())
 # @time r = Nonconvex.optimize(m, IpoptAlg(), x0; options = IpoptOptions())
 # @time r = Nonconvex.optimize(m, MMA87(), x0; options = MMAOptions())
