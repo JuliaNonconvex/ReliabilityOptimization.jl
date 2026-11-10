@@ -10,13 +10,18 @@ on:
     branches:
       - master
   workflow_dispatch:
+    inputs:
+      destination:
+        description: 'Site destination directory (dev, stable, preview/PRnn)'
+        required: false
+        default: dev
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
   issues: write
@@ -53,7 +58,7 @@ jobs:
         run: julia --project=docs --color=yes docs/make.jl
       - name: Assemble site with the previous destinations
         env:
-          DEST: ${{ startsWith(github.ref, 'refs/tags/') && 'stable' || (github.event_name == 'pull_request' && format('preview/PR{0}', github.event.pull_request.number) || 'dev') }}
+          DEST: ${{ startsWith(github.ref, 'refs/tags/') && 'stable' || (github.event_name == 'pull_request' && format('preview/PR{0}', github.event.pull_request.number) || github.event.inputs.destination) || 'dev' }}
         run: |
           git clone --depth=1 --branch gh-pages \
             "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" /tmp/site \
@@ -62,6 +67,22 @@ jobs:
           mkdir -p "/tmp/site/$DEST"
           cp -r docs/build/. "/tmp/site/$DEST/"
           touch /tmp/site/.nojekyll
+      - name: Persist the destination to gh-pages
+        env:
+          DEST: ${{ startsWith(github.ref, 'refs/tags/') && 'stable' || (github.event_name == 'pull_request' && format('preview/PR{0}', github.event.pull_request.number) || github.event.inputs.destination) || 'dev' }}
+        run: |
+          git clone --depth=1 --branch gh-pages \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" /tmp/ghp \
+            || { mkdir -p /tmp/ghp; }
+          rm -rf "/tmp/ghp/$DEST"
+          mkdir -p "/tmp/ghp/$DEST"
+          cp -r docs/build/. "/tmp/ghp/$DEST/"
+          touch /tmp/ghp/.nojekyll
+          cd /tmp/ghp
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || (git commit -m "deploy: $DEST" && git push origin gh-pages)
       - uses: actions/upload-pages-artifact@v3
         with:
           path: /tmp/site
