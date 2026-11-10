@@ -16,7 +16,9 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
   issues: write
   pull-requests: write
 
@@ -49,30 +51,23 @@ jobs:
             Pkg.precompile()'
       - name: Build docs with DocumenterFragments
         run: julia --project=docs --color=yes docs/make.jl
-      - name: Deploy dev docs (push to master)
-        if: github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/')
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Assemble site with the previous destinations
+        env:
+          DEST: ${{ startsWith(github.ref, 'refs/tags/') && 'stable' || (github.event_name == 'pull_request' && format('preview/PR{0}', github.event.pull_request.number) || 'dev') }}
+        run: |
+          git clone --depth=1 --branch gh-pages \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" /tmp/site \
+            || { mkdir -p /tmp/site; }
+          rm -rf "/tmp/site/$DEST"
+          mkdir -p "/tmp/site/$DEST"
+          cp -r docs/build/. "/tmp/site/$DEST/"
+          touch /tmp/site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/build
-          destination_dir: dev
-          keep_files: true
-      - name: Deploy stable docs (tag push)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/build
-          destination_dir: stable
-          keep_files: true
-      - name: Deploy PR preview docs (pull request)
-        if: github.event_name == 'pull_request'
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/build
-          destination_dir: preview/PR${{ github.event.pull_request.number }}
-          keep_files: true
+          path: /tmp/site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
       - name: Post preview URL comment
         if: github.event_name == 'pull_request'
         uses: thollander/actions-comment-pull-request@v3
