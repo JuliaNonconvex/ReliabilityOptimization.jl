@@ -20,8 +20,8 @@ struct SORM{M,H}
     method::M
     hessian::H
 end
-SORM() = SORM(FORM(RIA()), nothing)
 SORM(method::M) where {M} = SORM(method, nothing)
+SORM(; method=FORM(RIA()), hessian=nothing) = SORM(method, hessian)
 
 # SORM is a reliability-analysis method, not a RandomFunction method.
 function get_forward(f, tr, method::SORM, jac)

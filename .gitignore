@@ -4,3 +4,4 @@
 # Documentation build artifacts
 docs/build/
 docs/Manifest.toml
+test/Manifest.toml
