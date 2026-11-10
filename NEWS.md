@@ -1,6 +1,6 @@
 # NEWS
 
-## 0.6.0
+## 0.5.0
 
 - NonconvexCore 2 is now required (`NonconvexCore = "2"`); NonconvexUtils
   is no longer a dependency.

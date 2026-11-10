@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.0 (unreleased)
+## 0.5.0 (unreleased)
 
 - Support NonconvexCore 2: `NonconvexCore = "2"` is now the compat lower
   bound (NonconvexUtils is no longer used), and
