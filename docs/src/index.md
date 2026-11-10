@@ -1,5 +1,7 @@
 # ReliabilityOptimization
 
+![JuliaNonconvex logo](https://raw.githubusercontent.com/JuliaNonconvex/ReliabilityOptimization.jl/master/docs/src/assets/logo.png)
+
 `ReliabilityOptimization` provides reliability-based design optimization
 (RBDO/RBTO) on top of the [Nonconvex](https://github.com/JuliaNonconvex/Nonconvex.jl)
 ecosystem. A deterministic function `f(x, p)` of the design variables `x`
