@@ -1,6 +1,12 @@
 # ReliabilityOptimization
 
-![JuliaNonconvex logo](https://raw.githubusercontent.com/JuliaNonconvex/ReliabilityOptimization.jl/master/docs/src/assets/logo.png)
+```@raw html
+<p align="center">
+  <img src="https://raw.githubusercontent.com/JuliaNonconvex/ReliabilityOptimization.jl/master/docs/src/assets/logo.png" alt="JuliaNonconvex logo" width="180"/>
+</p>
+```
+
+
 
 `ReliabilityOptimization` provides reliability-based design optimization
 (RBDO/RBTO) on top of the [Nonconvex](https://github.com/JuliaNonconvex/Nonconvex.jl)
