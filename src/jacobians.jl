@@ -56,15 +56,14 @@ function ChainRulesCore.rrule(::typeof(_jacobian), f, x1, x2)
         x1v = _vec(x1)
         x̄1v = zeros(promote_type(eltype(x1v), eltype(x2)), length(x1v))
         if x1 isa Real
-            x̄1v[1] = dot(
-                Δm, (_jacobian(f, x1 + h, x2) - _jacobian(f, x1 - h, x2)) / (2h)
-            )
+            x̄1v[1] = dot(Δm, (_jacobian(f, x1 + h, x2) - _jacobian(f, x1 - h, x2)) / (2h))
         else
             e = zeros(eltype(x1v), length(x1v))
             for i in eachindex(x1v)
                 e[i] = one(eltype(x1v))
                 x̄1v[i] = dot(
-                    Δm, (_jacobian(f, x1v + h * e, x2) - _jacobian(f, x1v - h * e, x2)) / (2h)
+                    Δm,
+                    (_jacobian(f, x1v + h * e, x2) - _jacobian(f, x1v - h * e, x2)) / (2h),
                 )
                 e[i] = zero(eltype(x1v))
             end

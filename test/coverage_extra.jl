@@ -112,12 +112,7 @@ end
 
 @testitem "finite-difference jacobian and hessian helpers" begin
     using ReliabilityOptimization,
-        Test,
-        LinearAlgebra,
-        FiniteDifferences,
-        ChainRulesCore,
-        Zygote,
-        ForwardDiff
+        Test, LinearAlgebra, FiniteDifferences, ChainRulesCore, Zygote, ForwardDiff
 
     # _vec
     @test ReliabilityOptimization._vec(1.5) ≈ [1.5]
@@ -191,7 +186,7 @@ end
     # buffers used to be `zeros(float(eltype(x1)))`, silently promoting the
     # cotangent eltype to Dual{Float64} and truncating nested derivatives
     fdu = (x, p) -> p[1]^2 * x[1]^2 + p[1] * x[2]
-    xdu = ForwardDiff.Dual{:τ, Float32, 1}[1.3, -0.7]
+    xdu = ForwardDiff.Dual{:τ,Float32,1}[1.3, -0.7]
     pdu = Float32[0.4]
     Jdu = ReliabilityOptimization._jacobian(fdu, xdu, pdu)
     @test Jdu[1] ≈ 2 * 0.4 * 1.69 - 0.7 atol = 1e-3
