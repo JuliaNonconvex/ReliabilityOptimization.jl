@@ -4,6 +4,11 @@ _vec(x::Real) = [x]
 _vec(x) = x
 
 const fdm = FiniteDifferences.central_fdm(5, 1)
+# Unadapted: the step is derived from the point's eltype only. With the
+# adapted method, a closure returning duals (nested AD with dual-valued
+# designs) pushes Dual steps into the stencil, where FiniteDifferences then
+# calls Float64(::Dual) and errors.
+const fdm_stencil = FiniteDifferences.central_fdm(5, 1; adapt=0)
 
 """
     _jacobian(f, x1, x2)
@@ -16,7 +21,7 @@ function _jacobian(f, x1, x2)
     x2v = _vec(x2)
     scalarx2 = x2 isa Real
     ẏs = map(eachindex(x2v)) do n
-        return fdm(zero(eltype(x2v))) do ε
+        return fdm_stencil(zero(eltype(x2v))) do ε
             xcopy = vcat(x2v[1:(n - 1)], x2v[n] + ε, x2v[(n + 1):end])
             # copy required incase `f(x)` returns something that aliases `x`
             return copy(f(x1, scalarx2 ? xcopy[1] : xcopy))
@@ -49,7 +54,7 @@ function ChainRulesCore.rrule(::typeof(_jacobian), f, x1, x2)
         # eltype of the primals so nested/dual differentiation is not
         # truncated by `float`.
         x1v = _vec(x1)
-        x̄1v = zeros(eltype(x1v), length(x1v))
+        x̄1v = zeros(promote_type(eltype(x1v), eltype(x2)), length(x1v))
         if x1 isa Real
             x̄1v[1] = dot(
                 Δm, (_jacobian(f, x1 + h, x2) - _jacobian(f, x1 - h, x2)) / (2h)
@@ -68,7 +73,7 @@ function ChainRulesCore.rrule(::typeof(_jacobian), f, x1, x2)
         # scalar parameters are perturbed directly; vector parameters per
         # component (the limit state may only accept a scalar `p`)
         x2v = _vec(x2)
-        x̄2v = zeros(eltype(x2v), length(x2v))
+        x̄2v = zeros(promote_type(eltype(x2v), eltype(x1)), length(x2v))
         if x2 isa Real
             x̄2v[1] = dot(Δm, (_jacobian(f, x1, x2 + h) - _jacobian(f, x1, x2 - h)) / (2h))
         else
