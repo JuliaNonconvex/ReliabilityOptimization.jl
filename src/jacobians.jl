@@ -44,29 +44,41 @@ function ChainRulesCore.rrule(::typeof(_jacobian), f, x1, x2)
         ΔJ = ChainRulesCore.unthunk(ΔJ)
         Δm = ΔJ isa AbstractMatrix ? Matrix(ΔJ) : fill(ΔJ, size(J))
         h = cbrt(eps(float(real(eltype(x2)))))
-        x̄1 = zeros(float(eltype(x1)), length(x1))
-        e = zeros(eltype(x1), length(x1))
-        for i in eachindex(x1)
-            e[i] = one(eltype(x1))
-            x̄1[i] = dot(
-                Δm, (_jacobian(f, x1 + h * e, x2) - _jacobian(f, x1 - h * e, x2)) / (2h)
+        # scalar designs are perturbed directly; vector designs per component
+        # (the limit state may only accept a scalar `x`). Buffers keep the
+        # eltype of the primals so nested/dual differentiation is not
+        # truncated by `float`.
+        x1v = _vec(x1)
+        x̄1v = zeros(eltype(x1v), length(x1v))
+        if x1 isa Real
+            x̄1v[1] = dot(
+                Δm, (_jacobian(f, x1 + h, x2) - _jacobian(f, x1 - h, x2)) / (2h)
             )
-            e[i] = zero(eltype(x1))
+        else
+            e = zeros(eltype(x1v), length(x1v))
+            for i in eachindex(x1v)
+                e[i] = one(eltype(x1v))
+                x̄1v[i] = dot(
+                    Δm, (_jacobian(f, x1v + h * e, x2) - _jacobian(f, x1v - h * e, x2)) / (2h)
+                )
+                e[i] = zero(eltype(x1v))
+            end
         end
+        x̄1 = x1 isa Real ? x̄1v[1] : x̄1v
         # scalar parameters are perturbed directly; vector parameters per
         # component (the limit state may only accept a scalar `p`)
         x2v = _vec(x2)
-        x̄2v = zeros(float(eltype(x2v)), length(x2v))
+        x̄2v = zeros(eltype(x2v), length(x2v))
         if x2 isa Real
             x̄2v[1] = dot(Δm, (_jacobian(f, x1, x2 + h) - _jacobian(f, x1, x2 - h)) / (2h))
         else
-            e = zeros(eltype(x2), length(x2v))
+            e = zeros(eltype(x2v), length(x2v))
             for i in eachindex(x2v)
-                e[i] = one(eltype(x2))
+                e[i] = one(eltype(x2v))
                 x̄2v[i] = dot(
                     Δm, (_jacobian(f, x1, x2 + h * e) - _jacobian(f, x1, x2 - h * e)) / (2h)
                 )
-                e[i] = zero(eltype(x2))
+                e[i] = zero(eltype(x2v))
             end
         end
         x̄2 = x2 isa Real ? x̄2v[1] : x̄2v
