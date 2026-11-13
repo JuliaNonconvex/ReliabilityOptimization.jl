@@ -44,7 +44,7 @@ julia> g = (x, p) -> 3.0 + x[1] - p[1] - p[2]; # margin convention
 
 julia> p = MvNormal(zeros(2), Matrix{Float64}(I, 2, 2));
 
-julia> # c(x) ≤ 0 ⟺ P(g(x, p) ≤ 0) ≥ Φ(2): PMA by default
+julia> # c(x) ≤ 0 ⟺ P(g(x, p) ≥ 0) ≥ Φ(2) (margin convention): PMA by default
 
 julia> c = reliability_constraint(g, p, 2.0);
 
