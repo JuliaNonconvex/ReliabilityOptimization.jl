@@ -29,10 +29,27 @@ end
     failure_probability(f, x, p; method = FORM(RIA()), jacobian = nothing)
 
 The first-order approximation `Φ(−β)` of the probability of failure
-(`SORM`-corrected with `method = SORM(...)`).
+(`SORM`-corrected with `method = SORM(...)`). The index is **signed**:
+`β < 0` when the limit state is negative at the mean point `(x, μ)` (the
+mean design lies in the failure region), in which case the failure
+probability is near 1 and is returned as `Φ(β)`, with a warning. The SORM
+correction assumes the mean design is in the safe region.
 """
 function failure_probability(f, x, p; method=FORM(RIA()), jacobian=nothing)
-    return cdf(Normal(), -reliability_index(f, x, p; method=method, jacobian=jacobian))
+    if method isa SORM
+        return cdf(Normal(), -reliability_index(f, x, p; method=method, jacobian=jacobian))
+    end
+    rf = RandomFunction(f, p, method; jacobian=jacobian)
+    β = reliability_index(rf, x)
+    g0 = _scalar_limit_state(rf.f(x, rf.tr.μ))
+    if g0 < 0
+        @warn "The limit state is negative at the mean point `(x, μ)`: the " *
+            "mean design is in the failure region, so the first-order failure " *
+            "probability is near 1 (returned as `Φ(β)` instead of `Φ(−β)`)." maxlog =
+            10
+        return cdf(Normal(), β)
+    end
+    return cdf(Normal(), -β)
 end
 
 """
@@ -75,7 +92,10 @@ safe, `g = 0` the failure surface); the requirement is then
 
 - Default (`method = nothing`): PMA, returning `c(x) = −g*(x)` with the
   margin convention (`g ≥ 0` safe).
-- `method = FORM(RIA(...))`: returns `c(x) = β_target − β(x)`.
+- `method = FORM(RIA(...))`: returns `c(x) = β_target − β(x)` with the
+  **signed** index convention: `β < 0` when the limit state is negative at
+  the mean point `(x, μ)` (the mean design lies in the failure region), so
+  the requirement is never reported satisfied there.
 - `method = FORM(PMA(β_target = ...))`: as the default, with custom inner
   solver settings.
 
@@ -89,7 +109,13 @@ function reliability_constraint(f, p, β_target::Real; method=nothing, jacobian=
         return x -> -performance_measure(rf, x)
     elseif m isa FORM{<:RIA}
         rf = RandomFunction(f, p, m; jacobian=jacobian)
-        return x -> β_target - reliability_index(rf, x)
+        return x -> begin
+            β = reliability_index(rf, x)
+            # Signed index: negative when the mean point is in the failure
+            # region, so the requirement stays violated there.
+            g0 = _scalar_limit_state(rf.f(x, rf.tr.μ))
+            return β_target - (g0 < 0 ? -β : β)
+        end
     end
     return throw(
         ArgumentError(
