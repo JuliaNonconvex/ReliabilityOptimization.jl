@@ -1,6 +1,24 @@
 # Changelog
 
-## 0.5.0 (unreleased)
+## 0.5.3
+
+- Fixed the RandomFunction rrule BoundsError and the scalar-design Jacobian
+  pullback; widened the dependency compatibility bounds; added Pkg to the
+  test environment; codecov OIDC/v5 uploads.
+
+## 0.5.2
+
+- Re-enabled the TopOpt example testitem now that the Core-2 upstream is
+  registered; restored the full README with the docs-first badges; logo
+  sizing fixes.
+
+## 0.5.1
+
+- Widened the Zygote compat for the Core-2 ecosystem; added the
+  organization logo to the docs and README; fixed the docs deployment
+  (destinations persisted to gh-pages).
+
+## 0.5.0
 
 - Support NonconvexCore 2: `NonconvexCore = "2"` is now the compat lower
   bound (NonconvexUtils is no longer used), and
