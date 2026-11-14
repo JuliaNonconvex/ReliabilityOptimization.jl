@@ -111,7 +111,8 @@ end
 end
 
 @testitem "finite-difference jacobian and hessian helpers" begin
-    using ReliabilityOptimization, Test, LinearAlgebra, FiniteDifferences, ChainRulesCore
+    using ReliabilityOptimization,
+        Test, LinearAlgebra, FiniteDifferences, ChainRulesCore, Zygote, ForwardDiff
 
     # _vec
     @test ReliabilityOptimization._vec(1.5) ≈ [1.5]
@@ -162,6 +163,46 @@ end
     _, _, x̄2, p̄2 = pb(0.6)
     _, _, x̄1, p̄1 = pb([0.6;;])
     @test x̄2 ≈ x̄1 && p̄2 ≈ p̄1
+
+    # scalar design: the rrule must keep the design cotangent scalar (it
+    # used to be indexed like a vector, raising a BoundsError) and agree
+    # with finite differences and Zygote
+    fsc = (x, p) -> p[1] * x^2
+    xsc = 1.5
+    psc = [0.7]
+    Jsc = ReliabilityOptimization._jacobian(fsc, xsc, psc)
+    Δsc = [0.6;;]
+    valsc, pbsc = ChainRulesCore.rrule(ReliabilityOptimization._jacobian, fsc, xsc, psc)
+    @test valsc ≈ Jsc
+    _, _, x̄sc, p̄sc = pbsc(Δsc)
+    @test x̄sc isa Real
+    lossc = (xx, pp) -> dot(Δsc, ReliabilityOptimization._jacobian(fsc, xx, pp))
+    x̄sc_fd = FiniteDifferences.grad(central_fdm(5, 1), xx -> lossc(xx, psc), xsc)[1]
+    x̄sc_zy = Zygote.gradient(xx -> lossc(xx, psc), xsc)[1]
+    @test x̄sc ≈ x̄sc_fd rtol = 1e-6 atol = 1e-8
+    @test x̄sc_zy ≈ x̄sc_fd rtol = 1e-6 atol = 1e-8
+
+    # eltype-preserving cotangent buffers: with Float32-valued duals the
+    # buffers used to be `zeros(float(eltype(x1)))`, silently promoting the
+    # cotangent eltype to Dual{Float64} and truncating nested derivatives
+    fdu = (x, p) -> p[1]^2 * x[1]^2 + p[1] * x[2]
+    xdu = ForwardDiff.Dual{:τ,Float32,1}[1.3, -0.7]
+    pdu = Float32[0.4]
+    Jdu = ReliabilityOptimization._jacobian(fdu, xdu, pdu)
+    @test Jdu[1] ≈ 2 * 0.4 * 1.69 - 0.7 atol = 1e-3
+    Δdu = Float32[0.6;;]
+    valdu, pbdu = ChainRulesCore.rrule(ReliabilityOptimization._jacobian, fdu, xdu, pdu)
+    @test valdu ≈ Jdu
+    _, _, x̄du, p̄du = pbdu(Δdu)
+    # The design cotangent keeps the dual eltype of the primals; the
+    # parameter cotangent must be able to hold the duals that flow through
+    # the dual-valued design (promoted, not truncated to Float64).
+    @test eltype(x̄du) === eltype(xdu)
+    @test eltype(p̄du) <: ForwardDiff.Dual
+    # J = 2 p x[1]^2 + x[2], so ∂(dot(Δ, J))/∂x = Δ * [4 p x[1], 1]
+    @test x̄du ≈ [0.6 * 4 * 0.4 * 1.3, 0.6] atol = 1e-3
+    # ∂(dot(Δ, J))/∂p = Δ * 2 x[1]^2 = 0.6 * 2 * 1.69
+    @test p̄du[1] ≈ 0.6 * 2 * 1.69 atol = 1e-3
 
     # _hessian_fd: scalar and vector parameter branches
     H1 = ReliabilityOptimization._hessian_fd(q -> q^3 + 2q, 0.5)

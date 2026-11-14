@@ -67,8 +67,11 @@ end
     reliability_constraint(f, p, β_target; method = nothing, jacobian = nothing)
 
 Return a constraint function `x -> c(x)` for use with Nonconvex models,
-with `c(x) ≤ 0` if and only if the reliability requirement
-`P(g(x, p) ≤ 0) ≥ Φ(β_target)` is satisfied (failure side: `g > 0`).
+with `c(x) ≤ 0` if and only if the reliability requirement is satisfied.
+The limit state must follow the **margin convention** (positive values
+safe, `g = 0` the failure surface); the requirement is then
+`P(g(x, p) ≥ 0) ≥ Φ(β_target)` (failure probability at most
+`Φ(−β_target)`).
 
 - Default (`method = nothing`): PMA, returning `c(x) = −g*(x)` with the
   margin convention (`g ≥ 0` safe).

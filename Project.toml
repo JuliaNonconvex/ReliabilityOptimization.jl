@@ -1,6 +1,6 @@
 name = "ReliabilityOptimization"
 uuid = "55eddd50-7f45-4398-96cf-6a37e2b16f80"
-version = "0.5.2"
+version = "0.5.3"
 authors = ["Lucas Pereira and Mohamed Tarek"]
 
 [deps]
@@ -24,6 +24,7 @@ ADTypes = "1"
 ChainRulesCore = "1"
 Distributions = "0.25"
 FiniteDifferences = "0.12"
+ForwardDiff = "0.10, 1"
 ImplicitDifferentiation = "0.2, 0.9"
 LinearAlgebra = "1"
 NonconvexCore = "2"
@@ -43,6 +44,7 @@ julia = "1.10"
 TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 
 [targets]
-test = ["TestItemRunner", "TestItems", "Test"]
+test = ["TestItemRunner", "TestItems", "Test", "ForwardDiff"]

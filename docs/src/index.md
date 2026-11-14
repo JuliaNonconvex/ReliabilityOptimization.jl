@@ -85,8 +85,9 @@ transformation. See
 ## Probabilistic constraints
 
 [`reliability_constraint`](@ref) builds constraints of the form
-`P(g(x, p) ≤ 0) ≥ Φ(β_target)` for Nonconvex models, in either the RIA or
-the PMA formulation. See [Reliability constraints](constraints.md).
+`P(g(x, p) ≥ 0) ≥ Φ(β_target)` (margin convention: positive values safe)
+for Nonconvex models, in either the RIA or the PMA formulation. See
+[Reliability constraints](constraints.md).
 
 ## Conventions and limitations
 

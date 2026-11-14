@@ -119,7 +119,13 @@ function ChainRulesCore.rrule(f::RandomFunction, x)
         Δm = Δm isa ChainRulesCore.AbstractZero ? zeros(length(muf)) : Array(Δm)
         ΔS = ΔS isa ChainRulesCore.AbstractZero ? zeros(size(covf)) : Array(ΔS)
         _, back = Zygote.pullback(_mean_cov, f, x)
-        ∂f, ∂x = back((Δm, ΔS))
+        # The cotangent of the last argument (`x`) is the last element of
+        # the tuple returned by Zygote's public pullback; depending on the
+        # Zygote version the non-differentiable `f` argument cotangent is
+        # either kept (2-tuple `(∂f, ∂x)`) or dropped (1-tuple `(∂x,)`), so
+        # destructuring into `∂f, ∂x` (BoundsError) or indexing `[1]`
+        # (`nothing`) are both wrong.
+        ∂x = back((Δm, ΔS))[end]
         return NoTangent(), ∂x
     end
     return dist, pullback
