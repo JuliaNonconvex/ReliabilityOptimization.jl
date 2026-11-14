@@ -39,9 +39,9 @@ mapping from the original parameters is handled by the
 - Any univariate distribution: the Rosenblatt transform
   `p = F_X^{-1}(Φ(u))`, `u = Φ⁻¹(F_X(p))` — see the textbook table in
   [Distribution transformations](transforms.md).
-- Correlated non-Gaussian parameters: the [Nataf transform](@ref
-  nataf_transform), which solves the equivalent-normal correlation `ρ₀` so
-  the back-transformed parameters have the target correlation.
+- Correlated non-Gaussian parameters: the [`nataf_transform`](@ref), which
+  solves the equivalent-normal correlation `ρ₀` so the back-transformed
+  parameters have the target correlation.
 
 ## 3. The reliability index
 
