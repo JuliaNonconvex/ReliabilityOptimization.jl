@@ -50,11 +50,11 @@ end
 obj(x0)
 g1 = Zygote.gradient(obj, x0)[1]
 g2 = FiniteDifferences.grad(central_fdm(5, 1), obj, x0)[1]
-norm(g1 - g2)
+@test g1 ≈ g2 rtol = 1e-5 atol = 1e-6
 
 cg1 = Zygote.gradient(constr, x0)[1]
 cg2 = FiniteDifferences.grad(central_fdm(5, 1), constr, x0)[1]
-norm(cg1 - cg2)
+@test cg1 ≈ cg2 rtol = 1e-5 atol = 1e-6
 
 m = Model(obj) # create optimization model
 # TOBS optimizes binary material variables, so the pseudo-densities must
@@ -63,5 +63,3 @@ addvar!(m, zeros(length(x0)), ones(length(x0)); integer=true)
 add_ineq_constraint!(m, constr) # setup volume inequality constraint
 
 @time r = optimize(m, TOBSAlg(), x0; options=TOBSOptions())
-# @time r = Nonconvex.optimize(m, IpoptAlg(), x0; options = IpoptOptions())
-# @time r = Nonconvex.optimize(m, MMA87(), x0; options = MMAOptions())
