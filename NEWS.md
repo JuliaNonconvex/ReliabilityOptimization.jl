@@ -1,5 +1,12 @@
 # NEWS
 
+## 0.5.4
+
+- Signed the RIA reliability index: `reliability_constraint` (RIA) and
+  `failure_probability` now treat designs whose mean point lies in the
+  failure region as unreliable (failure probability near 1, with a warning)
+  instead of reporting the requirement satisfied via the unsigned index.
+
 ## 0.5.3
 
 - Fixed the RandomFunction rrule BoundsError and the scalar-design Jacobian
