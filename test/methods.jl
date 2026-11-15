@@ -57,7 +57,11 @@ end
     x = [2.0]
     @test getp0(f, x, p) ≈ [2.0] atol = 1e-4
     @test reliability_index(f, x, p) ≈ 0.5 atol = 1e-4
-    @test failure_probability(f, x, p) ≈ cdf(Normal(), -0.5) atol = 1e-6
+    # g(x, μ) = 1 - 2 < 0: the mean design is in the failure region under
+    # the margin convention, so the signed index is negative and the first
+    # order failure probability is Φ(β) ≈ 0.69 (P(p < 2) for p ~ N(1, 4)),
+    # not the unsigned Φ(-β).
+    @test failure_probability(f, x, p) ≈ cdf(Normal(), 0.5) atol = 1e-6
     g_ad = Zygote.gradient(x -> reliability_index(f, x, p), x)[1]
     g_fd = FiniteDifferences.grad(central_fdm(5, 1), x -> reliability_index(f, x, p), x)[1]
     @test g_ad ≈ g_fd rtol = 1e-5
@@ -137,6 +141,27 @@ end
     g_ad2 = Zygote.gradient(c_pma, [0.0])[1]
     g_fd2 = FiniteDifferences.grad(central_fdm(5, 1), c_pma, [0.0])[1]
     @test g_ad2 ≈ g_fd2 rtol = 1e-4
+end
+
+@testitem "RIA signs the reliability index at the mean point" begin
+    using ReliabilityOptimization, Test, Distributions
+    using LinearAlgebra
+
+    # Margin convention (g >= 0 safe) with the mean design in the FAILURE
+    # region: g(x, μ) = -3 < 0 at x = 0. The distance to the limit state is
+    # 3/√2, but the requirement must be reported violated and the failure
+    # probability near 1 (the unsigned index would report Φ(-3/√2) ≈ 0.017).
+    g_fail = (x, p) -> p[1] + p[2] - 3.0
+    p = MvNormal(zeros(2), Matrix{Float64}(I, 2, 2))
+    @test failure_probability(g_fail, [0.0], p) ≈ cdf(Normal(), 3 / sqrt(2)) atol = 1e-3
+    c_fail = reliability_constraint(g_fail, p, 2.0; method=FORM(RIA()))
+    @test c_fail([0.0]) > 0 # requirement NOT satisfied
+
+    # Mean design in the safe region keeps the classic unsigned convention.
+    g_ok = (x, p) -> 3.0 + x[1] - p[1] - p[2]
+    @test failure_probability(g_ok, [0.0], p) ≈ cdf(Normal(), -3 / sqrt(2)) atol = 1e-3
+    c_ok = reliability_constraint(g_ok, p, 2.0; method=FORM(RIA()))
+    @test c_ok([0.0]) ≈ 2.0 - 3 / sqrt(2) atol = 1e-3
 end
 
 @testitem "SORM curvature correction" begin
