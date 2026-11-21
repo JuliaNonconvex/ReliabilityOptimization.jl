@@ -1,5 +1,8 @@
 # NEWS
 
+## 0.5.6
+
+- Docs: package-name section titles and left-aligned logos (no code changes).
 ## 0.5.5
 
 - `ImplicitDifferentiation` compat tightened to `0.9` (the code requires the ≥ 0.9 API).\n- The TopOpt example gradients are now asserted.
