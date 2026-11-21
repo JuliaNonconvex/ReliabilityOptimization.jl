@@ -58,8 +58,11 @@ cg2 = FiniteDifferences.grad(central_fdm(5, 1), constr, x0)[1]
 
 m = Model(obj) # create optimization model
 # TOBS optimizes binary material variables, so the pseudo-densities must
-# be declared as integer (0/1) variables for the capability check to pass.
+# be declared as integer (0/1) variables for the capability check to pass,
+# and the starting point must itself be binary (a fractional start is
+# rejected since TOBS steps the design by whole variable flips).
 addvar!(m, zeros(length(x0)), ones(length(x0)); integer=true)
 add_ineq_constraint!(m, constr) # setup volume inequality constraint
 
-@time r = optimize(m, TOBSAlg(), x0; options=TOBSOptions())
+x0b = ones(length(x0)) # binary start (material 3 everywhere)
+@time r = optimize(m, TOBSAlg(), x0b; options=TOBSOptions())
