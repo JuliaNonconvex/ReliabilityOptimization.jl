@@ -1,7 +1,5 @@
 # ReliabilityOptimization
 
-![JuliaNonconvex logo](https://raw.githubusercontent.com/JuliaNonconvex/ReliabilityOptimization.jl/master/docs/src/assets/logo.png)
-
 
 
 `ReliabilityOptimization` provides reliability-based design optimization
